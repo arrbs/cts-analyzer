@@ -286,7 +286,8 @@ def generate_courses(results, completed):
                     start_date = min(dates).strftime('%d-%b-%Y')
                     end_date = max(dates).strftime('%d-%b-%Y')
                     date_info = f" - Start: {start_date}, End: {end_date}"
-            output += f"<p><strong>{name}: {perc:.0f}%{date_info}</strong></p><ul>"
+            output += f"<p><strong>{name}: {perc:.0f}%{date_info}</strong></p>"
+            output += "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th></tr></thead><tbody>"
             all_subs = courses[name]
             for sub in sorted(all_subs):
                 if sub in completed:
@@ -294,10 +295,12 @@ def generate_courses(results, completed):
                     color = get_color(status)
                     base_str = base_mo or 'N/A'
                     score_str = score or 'N/A'
-                    output += f"<li>{color}+ {sub} - {status} {score_str} {base_str}{RESET}</li>"
+                    date_str = date or 'N/A'
+                    status_colored = f"{color}{status}{RESET}"
+                    output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
                 else:
-                    output += f"<li>{RED}- {sub}{RESET}</li>"
-            output += "</ul>"
+                    output += f"<tr><td>{sub}</td><td>{RED}Not Completed{RESET}</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
+            output += "</tbody></table>"
     return output
 
 def analyze_courses(completed):
