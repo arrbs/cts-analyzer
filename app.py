@@ -230,12 +230,10 @@ def get_color(status_or_perc):
     if isinstance(status_or_perc, str):
         return GREEN if 'PASS' in status_or_perc else RED
     else:
-        if status_or_perc >= 90:
+        if status_or_perc == 100:
             return GREEN
-        elif status_or_perc >= 50:
-            return YELLOW
         else:
-            return RED
+            return YELLOW
 
 def generate_table(completed):
     output = "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th></tr></thead><tbody>"
