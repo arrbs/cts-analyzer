@@ -232,6 +232,16 @@ def parse_completed_subjects(text):
 
     return completed
 
+def extract_username(text):
+    # Search near the top: first 10 lines or so
+    lines = text.split('\n')[:10]
+    username_pattern = re.compile(r'(\w+@thc)', re.I)
+    for line in lines:
+        match = username_pattern.search(line)
+        if match:
+            return match.group(1)
+    return None
+
 def get_color(status_or_perc):
     if isinstance(status_or_perc, str):
         return GREEN if 'PASS' in status_or_perc else RED
@@ -261,59 +271,4 @@ def generate_courses(results, completed):
         color = get_color(perc)
         output += f"<li>{name}: {color}{perc:.0f}%{RESET}</li>"
     output += "</ul><h3>List Details:</h3>"
-    for name, details in sorted_results:
-        if details['completion_percentage'] > 0:
-            perc = details['completion_percentage']
-            date_info = ""
-            if perc == 100:
-                dates = []
-                for sub in courses[name]:
-                    if sub in completed and completed[sub][0] == 'PASS' and completed[sub][3]:
-                        parsed_date = parse_date(completed[sub][3])
-                        if parsed_date:
-                            dates.append(parsed_date)
-                if dates:
-                    start_date = min(dates).strftime('%d-%b-%Y')
-                    end_date = max(dates).strftime('%d-%b-%Y')
-                    date_info = f" - Start: {start_date}, End: {end_date}"
-            output += f"<p><strong>{name}: {perc:.0f}%{date_info}</strong></p><ul>"
-            all_subs = courses[name]
-            for sub in sorted(all_subs):
-                if sub in completed:
-                    status, score, base_mo, date = completed[sub]
-                    color = get_color(status)
-                    base_str = base_mo or 'N/A'
-                    score_str = score or 'N/A'
-                    output += f"<li>{color}+ {sub} - {status} {score_str} {base_str}{RESET}</li>"
-                else:
-                    output += f"<li>{RED}- {sub}{RESET}</li>"
-            output += "</ul>"
-    return output
-
-def analyze_courses(completed):
-    results = {}
-    for course_name, req_subjects in courses.items():
-        total = len(req_subjects)
-        completed_count = sum(1 for sub in req_subjects if sub in completed and completed[sub][0] == 'PASS')
-        results[course_name] = {'completion_percentage': (completed_count / total * 100) if total else 0}
-    return results
-
-# Streamlit app
-st.title("PDF Exam Analyzer")
-st.markdown("**Instructions:** Drag and drop your PDF into the box below (or click 'Browse files' to select). Then click 'Process PDF'. Do NOT drop the PDF on the full page—it will open the file instead.")
-uploaded_file = st.file_uploader("Upload PDF", type="pdf")
-
-if uploaded_file is not None:
-    if st.button("Process PDF"):
-        text = extract_text_from_pdf(uploaded_file)
-        if not text:
-            st.error("No text extracted from PDF. The file may be scanned/image-only or corrupted.")
-        else:
-            completed = parse_completed_subjects(text)
-            if completed:
-                st.subheader("Subjects Detected")
-                st.markdown(generate_table(completed), unsafe_allow_html=True)
-                results = analyze_courses(completed)
-                st.markdown(generate_courses(results, completed), unsafe_allow_html=True)
-            else:
-                st.warning("No subjects detected in the PDF.")
+    for name, details in sorted_results
