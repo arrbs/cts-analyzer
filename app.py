@@ -244,12 +244,11 @@ def generate_courses(results, completed):
             all_subs = courses[name]
             for sub in sorted(all_subs):
                 if sub in completed:
-                    status, score, base_month, date = completed[sub]
+                    status, score, base_mo, date = completed[sub]
                     color = get_color(status)
-                    base_str = base_month or 'N/A'
+                    base_str = base_mo or 'N/A'
                     score_str = score or 'N/A'
-                    date_str = date or 'N/A'
-                    output += f"<li>{color}+ {sub} - {status} {score_str} {base_str} {date_str}{RESET}</li>"
+                    output += f"<li>{color}+ {sub} - {status} {score_str} {base_str}{RESET}</li>"
                 else:
                     output += f"<li>{RED}- {sub}{RESET}</li>"
             output += "</ul>"
