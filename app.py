@@ -175,25 +175,26 @@ def parse_completed_subjects(text):
         found_exam = False
         for i, line in enumerate(section):
             line_clean = line.replace('$', '').lower()
-            if 'exam' in line_clean:
+            if re.search(r'\bexam\b', line_clean):
                 found_exam = True
                 score_found = False
-                for m in range(0, 3):
+                for m in range(0, 7):
                     if i + m < len(section):
                         sub_line = section[i + m]
                         sub_line_clean = sub_line.replace('$', '').lower()
-                        score_match = re.search(r'(\d+%)\s*(pass|fail)?', sub_line_clean)
+                        score_match = re.search(r'(\d+)\s*%\s*(pass|fail)?', sub_line_clean)
                         if score_match:
-                            exam_score = score_match.group(1).upper()
+                            score_num = score_match.group(1)
+                            exam_score = score_num + '%'
                             status_str = score_match.group(2) or ''
-                            exam_status = 'PASS' if 'pass' in status_str or int(exam_score.rstrip('%')) >= 70 else 'FAIL'
+                            exam_status = 'PASS' if 'pass' in status_str.lower() or int(score_num) >= 70 else 'FAIL'
                             score_found = True
                             # Find date
                             date_match = date_pattern.search(sub_line)
                             if date_match:
                                 exam_date = date_match.group(0)
                             else:
-                                for p in range(-1, 4):
+                                for p in range(-3, 7):
                                     q = i + m + p
                                     if 0 <= q < len(section):
                                         date_match = date_pattern.search(section[q])
