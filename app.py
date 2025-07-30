@@ -84,7 +84,7 @@ subjects = {
         "courses": ["Basic Indoc"]
     },
     "SMS": {
-        "search_terms": ["The Helicopter and Jet Company - SMS", "THC - SMS Exam"],
+        "search_terms": ["The Helicopter and Jet Company - SMS", "THC - SMS Exam", "SMS Exam"],
         "courses": ["SMS"]
     },
     "Hazmat": {
