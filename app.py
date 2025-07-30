@@ -115,7 +115,7 @@ for subject, data in subjects.items():
         courses[course].add(subject)
 
 def clean_text(text):
-    # Fix common OCR errors in dates, e.g., "202 2024" -> "2024" if the second starts with the first
+    # Fix common OCR errors in dates, e.g., "202 2024" -> "2024"
     text = re.sub(r'(\d{3})\s+(\d{4})', lambda m: m.group(2) if m.group(2).startswith(m.group(1)) else m.group(0), text)
     return text
 
@@ -131,122 +131,92 @@ def extract_text_from_pdf(pdf_file):
         st.error(f"Error extracting text: {e}")
     return clean_text(text)
 
+month_pattern = re.compile(r'(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)', re.I)
+
+date_pattern = re.compile(r'(\d{1,2}\s*-\s*[a-z]{3}\s*-\s*\d{4})|(\d{4}\s*-\s*[a-z]{3}\s*-\s*\d{1,2})', re.I)
+
 def parse_completed_subjects(text):
-    completed = defaultdict(list)  # subject -> list of (status, score, base_month, date)
-
     text_lower = text.lower()
-    lines = text.split('\n')
-
-    date_pattern = re.compile(r'(\d{1,2}\s*-\s*[a-z]{3}\s*-\s*\d{4})|(\d{4}\s*-\s*[a-z]{3}\s*-\s*\d{1,2})', re.I)  # Matches both DD-Mmm-YYYY and YYYY-Mmm-DD with optional spaces
-
-    month_pattern = re.compile(r'(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)', re.I)
-
     is_super_condensed = "super condensed report by student" in text_lower
-
-    for i, line in enumerate(lines):
+    lines = text.split('\n')
+    subjects_sections = defaultdict(list)
+    current_subject = None
+    for line in lines:
         line_lower = line.lower()
-        for subject, data in subjects.items():
+        found = False
+        for sub, data in subjects.items():
             for term in data["search_terms"]:
-                term_lower = term.lower()
-                if term_lower in line_lower:
-                    start = max(0, i - 10)  # Backward for base month
-                    end = min(len(lines), i + 50)
-                    context = ' '.join(lines[start:end]).lower()
-                    context_lines = lines[start:end]
-
-                    # Base month search in line or context
-                    base_month_match = month_pattern.search(' '.join(context_lines[max(0, i-start-1):i-start+3]))  # Look in previous, current and next 2 lines
-                    base_month = base_month_match.group(0).capitalize() if base_month_match else None
-                    if not base_month:
-                        base_month_match = re.search(r'base month\s*[:|]\s*(\w+)', context, re.I)
-                        base_month = base_month_match.group(1).capitalize() if base_month_match else None
-                    if not base_month:
-                        base_month_match = month_pattern.search(context)
-                        base_month = base_month_match.group(0).capitalize() if base_month_match else None
-
-                    # Calculate offset to start from the matched line
-                    offset = i - start
-
-                    exam_status = 'PASS'
-                    exam_score = None
-                    exam_date = None
-                    for j, ctx_line in enumerate(context_lines[offset:], start=offset):
-                        # Strip potential OCR artifacts like '$'
-                        ctx_line_clean = ctx_line.replace('$', '').lower()
-                        exam_match = re.search(r'exam\s*(\d+%)\s*(pass|fail)?', ctx_line_clean)
-                        if exam_match:
-                            exam_score = exam_match.group(1).upper()
-                            status_str = exam_match.group(2) or ''
+                if term.lower() in line_lower:
+                    current_subject = sub
+                    found = True
+                    break
+            if found:
+                break
+        if current_subject:
+            subjects_sections[current_subject].append(line)
+    completed = {}
+    for subject, section in subjects_sections.items():
+        section_text = '\n'.join(section).lower()
+        # Base month
+        base_month = None
+        base_match = re.search(r'base month\s*[:\s*](\w+)', section_text, re.I)
+        if base_match:
+            base_month = base_match.group(1).capitalize()
+        else:
+            early_text = ' '.join(section[:3]).lower()
+            no_date_early = date_pattern.sub('', early_text)
+            month_match = month_pattern.search(no_date_early)
+            if month_match:
+                base_month = month_match.group(0).capitalize()
+        # Look for exam score and date
+        exam_status = 'PASS'
+        exam_score = None
+        exam_date = None
+        found_exam = False
+        for i, line in enumerate(section):
+            line_clean = line.replace('$', '').lower()
+            if 'exam' in line_clean:
+                found_exam = True
+                score_found = False
+                for m in range(0, 3):
+                    if i + m < len(section):
+                        sub_line = section[i + m]
+                        sub_line_clean = sub_line.replace('$', '').lower()
+                        score_match = re.search(r'(\d+%)\s*(pass|fail)?', sub_line_clean)
+                        if score_match:
+                            exam_score = score_match.group(1).upper()
+                            status_str = score_match.group(2) or ''
                             exam_status = 'PASS' if 'pass' in status_str or int(exam_score.rstrip('%')) >= 70 else 'FAIL'
-                            
-                            # Look for date on this line, prev, or next (extended to j+3)
-                            for k in range(max(0, j-1), min(len(context_lines), j+3)):
-                                date_match = date_pattern.search(context_lines[k])
-                                if date_match:
-                                    exam_date = date_match.group(0)
-                                    break
-                            if exam_date:
-                                break  # Stop once we have score and date
-
-                    if exam_score is None:
-                        # Fallback: loop to find line with score, then date near it
-                        for j, ctx_line in enumerate(context_lines[offset:], start=offset):
-                            ctx_line_clean = ctx_line.replace('$', '').lower()
-                            status_match = re.search(r'(\d+%)\s*(pass|fail)?', ctx_line_clean)
-                            if status_match:
-                                exam_score = status_match.group(1).upper()
-                                status_str = status_match.group(2) or ''
-                                exam_status = 'PASS' if 'pass' in status_str or int(exam_score.rstrip('%')) >= 70 else 'FAIL'
-                                
-                                # Look for date near this line (extended to j+3)
-                                for k in range(max(0, j-1), min(len(context_lines), j+3)):
-                                    date_match = date_pattern.search(context_lines[k])
-                                    if date_match:
-                                        exam_date = date_match.group(0)
-                                        break
-                                if exam_date:
-                                    break  # Stop once we have score and date
-
-                        if exam_score is None:
-                            # Supercondensed fallback: assume listed = completed, set to 100%, look for date in the same line
-                            exam_status = 'PASS'
-                            exam_score = '100%'
-                            
-                            # The line is like | subject | base | date |
-                            # Split the line by |
-                            parts = [p.strip() for p in line.split('|') if p.strip()]
-                            if len(parts) >= 3:
-                                # parts[0] = subject, parts[1] = base month, parts[2] = date
-                                if month_pattern.search(parts[1]):
-                                    base_month = parts[1].capitalize()
-                                date_match = date_pattern.search(parts[2])
-                                if date_match:
-                                    exam_date = date_match.group(0)
+                            score_found = True
+                            # Find date
+                            date_match = date_pattern.search(sub_line)
+                            if date_match:
+                                exam_date = date_match.group(0)
                             else:
-                                # Fallback search in current line
-                                date_match = date_pattern.search(line)
-                                if date_match:
-                                    exam_date = date_match.group(0)
+                                for p in range(-1, 4):
+                                    q = i + m + p
+                                    if 0 <= q < len(section):
+                                        date_match = date_pattern.search(section[q])
+                                        if date_match:
+                                            exam_date = date_match.group(0)
+                                            break
+                            break
+                if score_found:
+                    break
+        if found_exam and exam_score:
+            completed[subject] = (exam_status, exam_score, base_month, exam_date)
+        elif is_super_condensed:
+            # Fallback for super condensed
+            exam_status = 'PASS'
+            exam_score = '100%'
+            # Find last date in section
+            section_str = '\n'.join(section)
+            dates = [d for group in date_pattern.findall(section_str) for d in group if d]
+            if dates:
+                exam_date = dates[-1]
+            completed[subject] = (exam_status, exam_score, base_month, exam_date)
 
-                    else:
-                        # If exam found but no date yet, search forward a few lines
-                        if not exam_date:
-                            for k in range(offset, min(len(context_lines), offset+6)):
-                                date_match = date_pattern.search(context_lines[k])
-                                if date_match:
-                                    exam_date = date_match.group(0)
-                                    break
-
-                    completed[subject].append((exam_status, exam_score, base_month, exam_date))
-                    break  # Stop checking other terms for this subject in this line
-
-    unique_completed = {}
-    for subject, entries in completed.items():
-        # Prefer entries with date, then higher scores
-        sorted_entries = sorted(entries, key=lambda x: (x[3] is not None, x[1] is not None, int(x[1].rstrip('%')) if x[1] else 0, x[2] is not None, x[0] == 'PASS'), reverse=True)
-        unique_completed[subject] = sorted_entries[0]
-
-    return unique_completed
+    return completed
 
 def get_color(status_or_perc):
     if isinstance(status_or_perc, str):
