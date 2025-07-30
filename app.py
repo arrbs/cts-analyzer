@@ -127,7 +127,7 @@ def extract_text_from_pdf(pdf_file):
     return text
 
 def parse_completed_subjects(text):
-    completed = defaultdict(list)  # subject -> list of (date, status, score, base_month)
+    completed = defaultdict(list)  # subject -> list of (status, score, base_month)
 
     text_lower = text.lower()
     lines = text.split('\n')
@@ -146,32 +146,15 @@ def parse_completed_subjects(text):
                     base_month_match = re.search(r'base month\s*[:|]\s*(\w+)', context, re.I)
                     base_month = base_month_match.group(1).capitalize() if base_month_match else None
 
-                    exam_date = None
                     exam_status = 'PASS'
                     exam_score = None
                     for ctx_line in context_lines:
-                        exam_match = re.search(r'exam\s*(\d+%)\s*(pass|fail)?\s*(\d{4}-[a-z]{3}-\d{1,2}|\d{2}-[a-z]{3}-\d{4}|\d{4}-\d{2}-\d{2})', ctx_line.lower())
+                        exam_match = re.search(r'exam\s*(\d+%)\s*(pass|fail)?', ctx_line.lower())
                         if exam_match:
                             exam_score = exam_match.group(1).upper()
                             status_str = exam_match.group(2) or ''
                             exam_status = 'PASS' if 'pass' in status_str or int(exam_score.rstrip('%')) >= 70 else 'FAIL'
-                            exam_date = exam_match.group(3)
                             break
-
-                    fallback_date = None
-                    if not exam_date:
-                        date_patterns = [
-                            r'\d{4}-[a-z]{3}-\d{1,2}',
-                            r'\d{2}-[a-z]{3}-\d{4}',
-                            r'\d{4}-\d{2}-\d{2}',
-                        ]
-                        for pattern in date_patterns:
-                            date_match = re.search(pattern, context)
-                            if date_match:
-                                fallback_date = date_match.group(0)
-                                break
-
-                    date = exam_date or fallback_date
 
                     if exam_score is None:
                         status_match = re.search(r'(\d+%)\s*(pass|fail)?', context)
@@ -182,12 +165,12 @@ def parse_completed_subjects(text):
                         else:
                             exam_status = 'PASS' if 'pass' in context else ('FAIL' if 'fail' in context else 'PASS')
 
-                    completed[subject].append((date, exam_status, exam_score, base_month))
+                    completed[subject].append((exam_status, exam_score, base_month))
                     break
 
     unique_completed = {}
     for subject, entries in completed.items():
-        sorted_entries = sorted(entries, key=lambda x: (x[2] is not None, x[0] is not None, x[3] is not None, x[1] == 'PASS'), reverse=True)
+        sorted_entries = sorted(entries, key=lambda x: (x[1] is not None, x[2] is not None, x[0] == 'PASS'), reverse=True)
         unique_completed[subject] = sorted_entries[0]
 
     return unique_completed
@@ -204,14 +187,13 @@ def get_color(status_or_perc):
             return RED
 
 def generate_table(completed):
-    output = "<table><thead><tr><th>Subject</th><th>Date</th><th>Status</th><th>Score</th><th>Base Mo</th></tr></thead><tbody>"
-    for subject, (date, status, score, base_mo) in sorted(completed.items()):
-        date_str = date or 'Unknown'
+    output = "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Mo</th></tr></thead><tbody>"
+    for subject, (status, score, base_mo) in sorted(completed.items()):
         base_str = base_mo or 'N/A'
         score_str = score or 'N/A'
         color = get_color(status)
         status_colored = f"{color}{status}{RESET}"
-        output += f"<tr><td>{subject}</td><td>{date_str}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td></tr>"
+        output += f"<tr><td>{subject}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td></tr>"
     output += "</tbody></table>"
     return output
 
@@ -229,12 +211,11 @@ def generate_courses(results, completed):
             all_subs = courses[name]
             for sub in sorted(all_subs):
                 if sub in completed:
-                    date, status, score, base_mo = completed[sub]
+                    status, score, base_mo = completed[sub]
                     color = get_color(status)
-                    date_str = date or 'Unknown'
                     base_str = base_mo or 'N/A'
                     score_str = score or 'N/A'
-                    output += f"<li>{color}+ {sub} - {date_str} {status} {score_str} {base_str}{RESET}</li>"
+                    output += f"<li>{color}+ {sub} - {status} {score_str} {base_str}{RESET}</li>"
                 else:
                     output += f"<li>{RED}- {sub}{RESET}</li>"
             output += "</ul>"
@@ -244,7 +225,7 @@ def analyze_courses(completed):
     results = {}
     for course_name, req_subjects in courses.items():
         total = len(req_subjects)
-        completed_count = sum(1 for sub in req_subjects if sub in completed and completed[sub][1] == 'PASS')
+        completed_count = sum(1 for sub in req_subjects if sub in completed and completed[sub][0] == 'PASS')
         results[course_name] = {'completion_percentage': (completed_count / total * 100) if total else 0}
     return results
 
