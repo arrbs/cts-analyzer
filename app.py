@@ -132,7 +132,9 @@ def parse_completed_subjects(text):
     text_lower = text.lower()
     lines = text.split('\n')
 
-    date_pattern = re.compile(r'(\d{4}-[a-z]{3}-\d{1,2})|(\d{1,2}/\d{1,2}/\d{4})', re.I)  # Matches YYYY-Mmm-DD or MM/DD/YYYY
+    date_pattern = re.compile(r'(\d{4}-[a-z]{3}-\d{1,2})|(\d{1,2}/\d{1,2}/\d{4})|(\d{1,2}-[a-z]{3}-\d{4})', re.I)  # Matches YYYY-Mmm-DD or MM/DD/YYYY or DD-Mmm-YYYY
+
+    month_pattern = re.compile(r'(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)', re.I)
 
     for i, line in enumerate(lines):
         line_lower = line.lower()
@@ -145,8 +147,12 @@ def parse_completed_subjects(text):
                     context = ' '.join(lines[start:end]).lower()
                     context_lines = lines[start:end]
 
-                    base_month_match = re.search(r'base month\s*[:|]\s*(\w+)', context, re.I)
-                    base_month = base_month_match.group(1).capitalize() if base_month_match else None
+                    # Base month search in line or context
+                    base_month_match = month_pattern.search(' '.join(context_lines[i-start:i-start+3]))  # Look in current and next 2 lines
+                    base_month = base_month_match.group(0).capitalize() if base_month_match else None
+                    if not base_month:
+                        base_month_match = re.search(r'base month\s*[:|]\s*(\w+)', context, re.I)
+                        base_month = base_month_match.group(1).capitalize() if base_month_match else None
 
                     # Calculate offset to start from the matched line
                     offset = i - start
@@ -192,29 +198,18 @@ def parse_completed_subjects(text):
                                     break  # Stop once we have score and date
 
                         if exam_score is None:
-                            # New fallback for "Complete" without score
-                            for j, ctx_line in enumerate(context_lines[offset:], start=offset):
-                                ctx_line_clean = ctx_line.lower()
-                                if 'complete' in ctx_line_clean:
-                                    exam_status = 'PASS'
-                                    exam_score = None
-                                    
-                                    # Look for date near this line
-                                    for k in range(max(0, j-1), min(len(context_lines), j+3)):
-                                        date_match = date_pattern.search(context_lines[k])
-                                        if date_match:
-                                            exam_date = date_match.group(0)
-                                            break
-                                    if exam_date:
-                                        break  # Stop once we have date
+                            # Supercondensed fallback: assume listed = completed, no score, look for date in line or nearby
+                            exam_status = 'PASS'
+                            exam_score = None
                             
-                            if exam_status == 'PASS' and not exam_date:
-                                # If found complete but no date, search forward
-                                for k in range(offset, min(len(context_lines), offset+5)):
-                                    date_match = date_pattern.search(context_lines[k])
-                                    if date_match:
-                                        exam_date = date_match.group(0)
-                                        break
+                            # Look for date in current line and next few
+                            for k in range(offset, min(len(context_lines), offset+3)):
+                                date_match = date_pattern.search(context_lines[k])
+                                if date_match:
+                                    exam_date = date_match.group(0)
+                                    break
+
+                            # If no date, search backward a bit for header or something, but primarily forward/current
 
                     else:
                         # If exam found but no date yet, search forward a few lines
