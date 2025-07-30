@@ -163,8 +163,8 @@ def parse_completed_subjects(text):
                             status_str = exam_match.group(2) or ''
                             exam_status = 'PASS' if 'pass' in status_str or int(exam_score.rstrip('%')) >= 70 else 'FAIL'
                             
-                            # Look for date on this line, prev, or next
-                            for k in range(max(0, j-1), min(len(context_lines), j+2)):
+                            # Look for date on this line, prev, or next (extended to j+3)
+                            for k in range(max(0, j-1), min(len(context_lines), j+3)):
                                 date_match = date_pattern.search(context_lines[k])
                                 if date_match:
                                     exam_date = date_match.group(0)
@@ -173,20 +173,39 @@ def parse_completed_subjects(text):
                                 break  # Stop once we have score and date
 
                     if exam_score is None:
-                        # Fallback: search only forward context for score
-                        forward_context = ' '.join([l.replace('$', '').lower() for l in context_lines[offset:]])
-                        status_match = re.search(r'(\d+%)\s*(pass|fail)?', forward_context)
-                        if status_match:
-                            exam_score = status_match.group(1).upper()
-                            status_str = status_match.group(2) or ''
-                            exam_status = 'PASS' if 'pass' in status_str or int(exam_score.rstrip('%')) >= 70 else 'FAIL'
-                        
-                        # For date in fallback, search near the matched line (offset)
-                        for k in range(offset, min(len(context_lines), offset+5)):  # Look forward a bit for completion date
-                            date_match = date_pattern.search(context_lines[k])
-                            if date_match:
-                                exam_date = date_match.group(0)
-                                break  # Take the first nearby date as completion date
+                        # Fallback: loop to find line with score, then date near it
+                        for j, ctx_line in enumerate(context_lines[offset:], start=offset):
+                            ctx_line_clean = ctx_line.replace('$', '').lower()
+                            status_match = re.search(r'(\d+%)\s*(pass|fail)?', ctx_line_clean)
+                            if status_match:
+                                exam_score = status_match.group(1).upper()
+                                status_str = status_match.group(2) or ''
+                                exam_status = 'PASS' if 'pass' in status_str or int(exam_score.rstrip('%')) >= 70 else 'FAIL'
+                                
+                                # Look for date near this line (extended to j+3)
+                                for k in range(max(0, j-1), min(len(context_lines), j+3)):
+                                    date_match = date_pattern.search(context_lines[k])
+                                    if date_match:
+                                        exam_date = date_match.group(0)
+                                        break
+                                if exam_date:
+                                    break  # Stop once we have score and date
+
+                        if exam_score is None:
+                            # If still no score, fallback to context pass/fail
+                            forward_context = ' '.join([l.replace('$', '').lower() for l in context_lines[offset:]])
+                            if 'pass' in forward_context:
+                                exam_status = 'PASS'
+                            elif 'fail' in forward_context:
+                                exam_status = 'FAIL'
+                            
+                            # Search for date near matched line
+                            for k in range(offset, min(len(context_lines), offset+5)):
+                                date_match = date_pattern.search(context_lines[k])
+                                if date_match:
+                                    exam_date = date_match.group(0)
+                                    break
+
                     else:
                         # If exam found but no date yet, search forward a few lines
                         if not exam_date:
