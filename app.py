@@ -56,7 +56,7 @@ subjects = {
         "courses": ["Initial General Subjects Course", "Module 2"]
     },
     "Runway Incursion": {
-        "search_terms": ["Survival", "Runway Incursion Exam"],
+        "search_terms": ["Runway Incursion Exam"],
         "courses": ["Initial General Subjects Course", "Module 2"]
     },
     "Survival": {
@@ -138,7 +138,7 @@ def parse_completed_subjects(text):
             for term in data["search_terms"]:
                 term_lower = term.lower()
                 if term_lower in line_lower:
-                    start = max(0, i - 10)
+                    start = max(0, i - 10)  # Backward for base month
                     end = min(len(lines), i + 50)
                     context = ' '.join(lines[start:end]).lower()
                     context_lines = lines[start:end]
@@ -146,10 +146,15 @@ def parse_completed_subjects(text):
                     base_month_match = re.search(r'base month\s*[:|]\s*(\w+)', context, re.I)
                     base_month = base_month_match.group(1).capitalize() if base_month_match else None
 
+                    # Calculate offset to start from the matched line
+                    offset = i - start
+
                     exam_status = 'PASS'
                     exam_score = None
-                    for ctx_line in context_lines:
-                        exam_match = re.search(r'exam\s*(\d+%)\s*(pass|fail)?', ctx_line.lower())
+                    for ctx_line in context_lines[offset:]:
+                        # Strip potential OCR artifacts like '$'
+                        ctx_line_clean = ctx_line.replace('$', '').lower()
+                        exam_match = re.search(r'exam\s*(\d+%)\s*(pass|fail)?', ctx_line_clean)
                         if exam_match:
                             exam_score = exam_match.group(1).upper()
                             status_str = exam_match.group(2) or ''
@@ -157,20 +162,23 @@ def parse_completed_subjects(text):
                             break
 
                     if exam_score is None:
-                        status_match = re.search(r'(\d+%)\s*(pass|fail)?', context)
+                        # Fallback: search only forward context
+                        forward_context = ' '.join([l.replace('$', '').lower() for l in context_lines[offset:]])
+                        status_match = re.search(r'(\d+%)\s*(pass|fail)?', forward_context)
                         if status_match:
                             exam_score = status_match.group(1).upper()
                             status_str = status_match.group(2) or ''
                             exam_status = 'PASS' if 'pass' in status_str or int(exam_score.rstrip('%')) >= 70 else 'FAIL'
                         else:
-                            exam_status = 'PASS' if 'pass' in context else ('FAIL' if 'fail' in context else 'PASS')
+                            exam_status = 'PASS' if 'pass' in forward_context else ('FAIL' if 'fail' in forward_context else 'PASS')
 
                     completed[subject].append((exam_status, exam_score, base_month))
-                    break
+                    break  # Stop checking other terms for this subject in this line
 
     unique_completed = {}
     for subject, entries in completed.items():
-        sorted_entries = sorted(entries, key=lambda x: (x[1] is not None, x[2] is not None, x[0] == 'PASS'), reverse=True)
+        # Prefer entries with higher scores if ties
+        sorted_entries = sorted(entries, key=lambda x: (x[1] is not None, int(x[1].rstrip('%')) if x[1] else 0, x[2] is not None, x[0] == 'PASS'), reverse=True)
         unique_completed[subject] = sorted_entries[0]
 
     return unique_completed
