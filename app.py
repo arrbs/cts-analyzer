@@ -2,6 +2,7 @@ import streamlit as st
 import pdfplumber
 import re
 from collections import defaultdict
+from datetime import datetime
 
 # HTML color spans
 GREEN = '<span style="color:green">'
@@ -135,6 +136,18 @@ month_pattern = re.compile(r'(january|february|march|april|may|june|july|august|
 
 date_pattern = re.compile(r'(\d{1,2}\s*-\s*[a-z]{3}\s*-\s*\d{4})|(\d{4}\s*-\s*[a-z]{3}\s*-\s*\d{1,2})', re.I)
 
+def parse_date(date_str):
+    if not date_str:
+        return None
+    date_str = date_str.replace(' ', '')  # Remove spaces
+    formats = ['%d-%b-%Y', '%Y-%b-%d']
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            pass
+    return None
+
 def parse_completed_subjects(text):
     text_lower = text.lower()
     is_super_condensed = "super condensed report by student" in text_lower
@@ -250,7 +263,20 @@ def generate_courses(results, completed):
     output += "</ul><h3>List Details:</h3>"
     for name, details in sorted_results:
         if details['completion_percentage'] > 0:
-            output += f"<p><strong>{name}: {details['completion_percentage']:.0f}%</strong></p><ul>"
+            perc = details['completion_percentage']
+            date_info = ""
+            if perc == 100:
+                dates = []
+                for sub in courses[name]:
+                    if sub in completed and completed[sub][0] == 'PASS' and completed[sub][3]:
+                        parsed_date = parse_date(completed[sub][3])
+                        if parsed_date:
+                            dates.append(parsed_date)
+                if dates:
+                    start_date = min(dates).strftime('%d-%b-%Y')
+                    end_date = max(dates).strftime('%d-%b-%Y')
+                    date_info = f" - Start: {start_date}, End: {end_date}"
+            output += f"<p><strong>{name}: {perc:.0f}%{date_info}</strong></p><ul>"
             all_subs = courses[name]
             for sub in sorted(all_subs):
                 if sub in completed:
