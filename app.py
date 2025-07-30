@@ -114,6 +114,11 @@ for subject, data in subjects.items():
     for course in data["courses"]:
         courses[course].add(subject)
 
+def clean_text(text):
+    # Fix common OCR errors in dates, e.g., "202 2024" -> "2024" if the second starts with the first
+    text = re.sub(r'(\d{3})\s+(\d{4})', lambda m: m.group(2) if m.group(2).startswith(m.group(1)) else m.group(0), text)
+    return text
+
 def extract_text_from_pdf(pdf_file):
     text = ""
     try:
@@ -124,7 +129,7 @@ def extract_text_from_pdf(pdf_file):
                     text += page_text + "\n"
     except Exception as e:
         st.error(f"Error extracting text: {e}")
-    return text
+    return clean_text(text)
 
 def parse_completed_subjects(text):
     completed = defaultdict(list)  # subject -> list of (status, score, base_month, date)
@@ -132,7 +137,7 @@ def parse_completed_subjects(text):
     text_lower = text.lower()
     lines = text.split('\n')
 
-    date_pattern = re.compile(r'(\d{1,2}-[a-z]{3}-\d{4})', re.I)  # Focus on DD-Mmm-YYYY as per examples
+    date_pattern = re.compile(r'(\d{1,2}\s*-\s*[a-z]{3}\s*-\s*\d{4})|(\d{4}\s*-\s*[a-z]{3}\s*-\s*\d{1,2})', re.I)  # Matches both DD-Mmm-YYYY and YYYY-Mmm-DD with optional spaces
 
     month_pattern = re.compile(r'(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)', re.I)
 
