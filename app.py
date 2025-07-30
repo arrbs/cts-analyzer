@@ -88,7 +88,7 @@ subjects = {
         "courses": ["SMS"]
     },
     "Hazmat": {
-        "search_terms": ["Hazmat - Will Not Carry", "Hazmat Will Not Carry Exam"],
+        "search_terms": ["THC - Dangerous Goods Awareness (DGA)-Will Not Carry", "Hazmat - Will Not Carry", "Hazmat Will Not Carry Exam"],
         "courses": ["Dangerous Goods"]
     },
     "CRM": {
