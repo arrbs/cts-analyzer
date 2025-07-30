@@ -68,7 +68,7 @@ subjects = {
         "courses": ["Initial General Subjects Course", "Module 2"]
     },
     "Traffic Collision Avoidance System": {
-        "search_terms": ["Traffic Collision Avoidance System (TCASII)", "TCAS II - Exam"],
+        "search_terms": ["TCAS II ", "Traffic Collision Avoidance System (TCASII)", "TCAS II - Exam"],
         "courses": ["Initial General Subjects Course", "Module 2"]
     },
     "Windshear": {
