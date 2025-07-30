@@ -134,13 +134,13 @@ def extract_text_from_pdf(pdf_file):
 
 month_pattern = re.compile(r'(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)', re.I)
 
-date_pattern = re.compile(r'(\d{1,2}\s*-\s*[a-z]{3}\s*-\s*\d{4})|(\d{4}\s*-\s*[a-z]{3}\s*-\s*\d{1,2})', re.I)
+date_pattern = re.compile(r'(\d{1,2}\s*-\s*[a-z]{3}\s*-\s*\d{4})|(\d{4}\s*-\s*[a-z]{3}\s*-\s*\d{1,2})|(\d{1,2}/\d{1,2}/\d{4})', re.I)
 
 def parse_date(date_str):
     if not date_str:
         return None
     date_str = date_str.replace(' ', '')  # Remove spaces
-    formats = ['%d-%b-%Y', '%Y-%b-%d']
+    formats = ['%d-%b-%Y', '%Y-%b-%d', '%m/%d/%Y']
     for fmt in formats:
         try:
             return datetime.strptime(date_str, fmt)
@@ -195,12 +195,12 @@ def parse_completed_subjects(text):
                     if i + m < len(section):
                         sub_line = section[i + m]
                         sub_line_clean = sub_line.replace('$', '').lower()
-                        score_match = re.search(r'(\d+)\s*%\s*(pass|fail)?', sub_line_clean)
+                        score_match = re.search(r'(\d+)\s*%\s*(pass|fail|complete)?', sub_line_clean)
                         if score_match:
                             score_num = score_match.group(1)
                             exam_score = score_num + '%'
                             status_str = score_match.group(2) or ''
-                            exam_status = 'PASS' if 'pass' in status_str.lower() or int(score_num) >= 70 else 'FAIL'
+                            exam_status = 'PASS' if 'pass' in status_str.lower() or 'complete' in status_str.lower() or int(score_num) >= 70 else 'FAIL'
                             score_found = True
                             # Find date
                             date_match = date_pattern.search(sub_line)
