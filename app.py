@@ -275,17 +275,16 @@ def generate_courses(results, completed):
         if details['completion_percentage'] > 0:
             perc = details['completion_percentage']
             date_info = ""
-            if perc == 100:
-                dates = []
-                for sub in courses[name]:
-                    if sub in completed and completed[sub][0] == 'PASS' and completed[sub][3]:
-                        parsed_date = parse_date(completed[sub][3])
-                        if parsed_date:
-                            dates.append(parsed_date)
-                if dates:
-                    start_date = min(dates).strftime('%d-%b-%Y')
-                    end_date = max(dates).strftime('%d-%b-%Y')
-                    date_info = f" - Start: {start_date}, End: {end_date}"
+            dates = []
+            for sub in courses[name]:
+                if sub in completed and completed[sub][0] == 'PASS' and completed[sub][3]:
+                    parsed_date = parse_date(completed[sub][3])
+                    if parsed_date:
+                        dates.append(parsed_date)
+            if dates:
+                start_date = min(dates).strftime('%d-%b-%Y')
+                end_date = max(dates).strftime('%d-%b-%Y')
+                date_info = f" - Start: {start_date}, End: {end_date}"
             output += f"<p><strong>{name}: {perc:.0f}%{date_info}</strong></p>"
             output += "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th></tr></thead><tbody>"
             all_subs = courses[name]
