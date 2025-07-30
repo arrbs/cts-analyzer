@@ -132,9 +132,11 @@ def parse_completed_subjects(text):
     text_lower = text.lower()
     lines = text.split('\n')
 
-    date_pattern = re.compile(r'(\d{4}-[a-z]{3}-\d{1,2})|(\d{1,2}/\d{1,2}/\d{4})|(\d{1,2}-[a-z]{3}-\d{4})', re.I)  # Removed YYYY-MM-DD
+    date_pattern = re.compile(r'(\d{1,2}-[a-z]{3}-\d{4})', re.I)  # Focus on DD-Mmm-YYYY as per examples
 
     month_pattern = re.compile(r'(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)', re.I)
+
+    is_super_condensed = "super condensed report by student" in text_lower
 
     for i, line in enumerate(lines):
         line_lower = line.lower()
@@ -201,30 +203,23 @@ def parse_completed_subjects(text):
                                     break  # Stop once we have score and date
 
                         if exam_score is None:
-                            # New fallback for "Complete" without score
-                            for j, ctx_line in enumerate(context_lines[offset:], start=offset):
-                                ctx_line_clean = ctx_line.lower()
-                                if 'complete' in ctx_line_clean:
-                                    exam_status = 'PASS'
-                                    exam_score = '100%'
-                                    
-                                    # Look for date near this line
-                                    for k in range(max(0, j-1), min(len(context_lines), j+3)):
-                                        date_match = date_pattern.search(context_lines[k])
-                                        if date_match:
-                                            exam_date = date_match.group(0)
-                                            break
-                                    if exam_date:
-                                        break  # Stop once we have date
+                            # Supercondensed fallback: assume listed = completed, set to 100%, look for date in the same line
+                            exam_status = 'PASS'
+                            exam_score = '100%'
                             
-                            if exam_score is None:
-                                # Supercondensed fallback: assume listed = completed, no score, but set to 100%, look for date in combined nearby lines
-                                exam_status = 'PASS'
-                                exam_score = '100%'
-                                
-                                # Combine nearby lines for date search
-                                combined_context = ' '.join(context_lines[max(0, offset-1):offset+3])
-                                date_match = date_pattern.search(combined_context)
+                            # The line is like | subject | base | date |
+                            # Split the line by |
+                            parts = [p.strip() for p in line.split('|') if p.strip()]
+                            if len(parts) >= 3:
+                                # parts[0] = subject, parts[1] = base month, parts[2] = date
+                                if month_pattern.search(parts[1]):
+                                    base_month = parts[1].capitalize()
+                                date_match = date_pattern.search(parts[2])
+                                if date_match:
+                                    exam_date = date_match.group(0)
+                            else:
+                                # Fallback search in current line
+                                date_match = date_pattern.search(line)
                                 if date_match:
                                     exam_date = date_match.group(0)
 
