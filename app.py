@@ -239,7 +239,7 @@ def extract_username(text):
     for line in lines:
         match = username_pattern.search(line)
         if match:
-            return match.group(1)
+            return match.group(1).split('@')[0]
     return None
 
 def get_color(status_or_perc):
@@ -320,10 +320,10 @@ if uploaded_file is not None:
             st.error("No text extracted from PDF. The file may be scanned/image-only or corrupted.")
         else:
             username = extract_username(text)
-            if username:
-                st.markdown(f"**Username:** {username}")
             completed = parse_completed_subjects(text)
             if completed:
+                if username:
+                    st.markdown(f"<h1>Report for {username}</h1>", unsafe_allow_html=True)
                 st.subheader("Subjects Detected")
                 st.markdown(generate_table(completed), unsafe_allow_html=True)
                 results = analyze_courses(completed)
