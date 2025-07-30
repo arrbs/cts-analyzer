@@ -148,6 +148,12 @@ def parse_date(date_str):
             pass
     return None
 
+def format_date(date_str):
+    parsed = parse_date(date_str)
+    if parsed:
+        return parsed.strftime('%d %B %Y')
+    return date_str or 'N/A'
+
 def parse_completed_subjects(text):
     text_lower = text.lower()
     is_super_condensed = "super condensed report by student" in text_lower
@@ -256,7 +262,7 @@ def generate_table(completed):
     for subject, (status, score, base_month, date) in sorted(completed.items()):
         base_str = base_month or 'N/A'
         score_str = score or 'N/A'
-        date_str = date or 'N/A'
+        date_str = format_date(date)
         color = get_color(status)
         status_colored = f"{color}{status}{RESET}"
         output += f"<tr><td>{subject}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
@@ -282,8 +288,8 @@ def generate_courses(results, completed):
                     if parsed_date:
                         dates.append(parsed_date)
             if dates:
-                start_date = min(dates).strftime('%d-%b-%Y')
-                end_date = max(dates).strftime('%d-%b-%Y')
+                start_date = min(dates).strftime('%d %B %Y')
+                end_date = max(dates).strftime('%d %B %Y')
                 date_info = f" - Start: {start_date}, End: {end_date}"
             output += f"<p><strong>{name}: {perc:.0f}%{date_info}</strong></p>"
             output += "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th></tr></thead><tbody>"
@@ -294,7 +300,7 @@ def generate_courses(results, completed):
                     color = get_color(status)
                     base_str = base_mo or 'N/A'
                     score_str = score or 'N/A'
-                    date_str = date or 'N/A'
+                    date_str = format_date(date)
                     status_colored = f"{color}{status}{RESET}"
                     output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
                 else:
