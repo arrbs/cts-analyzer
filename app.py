@@ -379,13 +379,13 @@ if uploaded_file is not None:
             username = extract_username(text)
             completed = parse_completed_subjects(text)
             if completed:
-                st.subheader("Subject Assignment Heatmap (last 2 years)")
-                plot_subject_heatmap(completed, window_years=2)
                 if username:
                     st.markdown(f"<h1>Report for {username}</h1>", unsafe_allow_html=True)
                 st.subheader("Subjects Detected")
                 st.markdown(generate_table(completed), unsafe_allow_html=True)
                 results = analyze_courses(completed)
                 st.markdown(generate_courses(results, completed), unsafe_allow_html=True)
+                st.subheader("Subject Assignment Heatmap (last 2 years)")
+                plot_subject_heatmap(completed, window_years=2)
             else:
                 st.warning("No subjects detected in the PDF.")
