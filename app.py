@@ -125,7 +125,8 @@ from dateutil.relativedelta import relativedelta
 
 def calculate_expiry(subject, date_str):
     """
-    Returns expiry date (datetime) using subject validity and grace month rule.
+    Returns expiry date (datetime) using subject validity and aviation grace month rule.
+    For a subject completed on date_str, expiry is the last day of the month after the validity period ends.
     """
     months = subjects.get(subject, {}).get("validity_months", 24)
     dt = parse_date(date_str)
@@ -133,17 +134,29 @@ def calculate_expiry(subject, date_str):
         return None
     # Add validity period
     valid_until = dt + relativedelta(months=months)
-    # Grace month: end of next calendar month
-    grace_month = valid_until.month + 1 if valid_until.month < 12 else 1
-    grace_year = valid_until.year if valid_until.month < 12 else valid_until.year + 1
-    grace_end = datetime(grace_year, grace_month, 1) + relativedelta(months=0, days=-1)
-    # Set to last day of grace month
+    # Add 1 month for grace, then set to last day of that month
+    grace = valid_until + relativedelta(months=1)
+    # Last day of grace month
+    if grace.month == 12:
+        last_day = 31
+    else:
+        last_day = (datetime(grace.year, grace.month + 1, 1) - relativedelta(days=1)).day
+    grace_end = datetime(grace.year, grace.month, last_day)
     return grace_end
 
-def format_expiry(expiry_dt):
+def format_expiry(expiry_dt, today=None):
     if not expiry_dt:
         return 'N/A'
-    return expiry_dt.strftime('%d %B %Y')
+    if today is None:
+        today = datetime.now()
+    days_left = (expiry_dt - today).days
+    if days_left < 0:
+        color = RED
+    elif days_left <= 60:
+        color = YELLOW
+    else:
+        color = GREEN
+    return f"{color}{expiry_dt.strftime('%d %B %Y')}{RESET}"
 
 # Threshold for "likely" course match (in %)
 LIKELY_THRESHOLD = 70
@@ -298,6 +311,7 @@ def get_color(status_or_perc):
 
 def generate_table(completed):
     output = "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th><th>Expiry</th></tr></thead><tbody>"
+    today = datetime.now()
     for subject, (status, score, base_month, date) in sorted(completed.items()):
         base_str = base_month or 'N/A'
         score_str = score or 'N/A'
@@ -305,7 +319,7 @@ def generate_table(completed):
         color = get_color(status)
         status_colored = f"{color}{status}{RESET}"
         expiry_dt = calculate_expiry(subject, date)
-        expiry_str = format_expiry(expiry_dt)
+        expiry_str = format_expiry(expiry_dt, today)
         output += f"<tr><td>{subject}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td><td>{expiry_str}</td></tr>"
     output += "</tbody></table>"
     return output
@@ -344,7 +358,7 @@ def generate_courses(results, completed):
                     date_str = format_date(date)
                     status_colored = f"{color}{status}{RESET}"
                     expiry_dt = calculate_expiry(sub, date)
-                    expiry_str = format_expiry(expiry_dt)
+                    expiry_str = format_expiry(expiry_dt, datetime.now())
                     output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td><td>{expiry_str}</td></tr>"
                 else:
                     output += f"<tr><td>{sub}</td><td>{RED}Not Completed{RESET}</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
