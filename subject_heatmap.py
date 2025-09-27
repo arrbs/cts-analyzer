@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import calplot
 import streamlit as st
 from datetime import datetime, timedelta
-from app import parse_date
+from utils import parse_date
 
 def plot_subject_heatmap(completed, window_years=2):
     # Collect all dates and subjects

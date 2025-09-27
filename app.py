@@ -1,4 +1,5 @@
 from subject_heatmap import plot_subject_heatmap
+from utils import parse_date
 import streamlit as st
 import pdfplumber
 import re
@@ -189,17 +190,7 @@ month_pattern = re.compile(r'(january|february|march|april|may|june|july|august|
 
 date_pattern = re.compile(r'(\d{1,2}\s*-\s*[a-z]{3}\s*-\s*\d{4})|(\d{4}\s*-\s*[a-z]{3}\s*-\s*\d{1,2})|(\d{1,2}/\d{1,2}/\d{4})', re.I)
 
-def parse_date(date_str):
-    if not date_str:
-        return None
-    date_str = date_str.replace(' ', '')  # Remove spaces
-    formats = ['%d-%b-%Y', '%Y-%b-%d', '%m/%d/%Y']
-    for fmt in formats:
-        try:
-            return datetime.strptime(date_str, fmt)
-        except ValueError:
-            pass
-    return None
+
 
 def format_date(date_str):
     parsed = parse_date(date_str)
