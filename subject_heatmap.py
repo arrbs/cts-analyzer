@@ -34,7 +34,7 @@ def plot_subject_heatmap(completed, window_years=2):
     tooltips = df.set_index("date")["subject"].to_dict()
     # Plot with error handling
     try:
-        fig = calplot.calplot(s, how="sum", cmap="YlOrRd", colorbar=False, figsize=(10, 2))
+        fig, _ = calplot.calplot(s, how="sum", cmap="YlOrRd", colorbar=False, figsize=(10, 2))
         plt.tight_layout()
         st.pyplot(fig)
         # Show hover info as a table below
