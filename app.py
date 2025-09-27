@@ -1,3 +1,5 @@
+from subject_heatmap import plot_subject_heatmap
+from utils import parse_date
 import streamlit as st
 import pdfplumber
 import re
@@ -14,51 +16,63 @@ RESET = '</span>'
 subjects = {
     "ADS-B": {
         "search_terms": ["ADS-B Overview", "ADS-B Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "Weather": {
         "search_terms": ["Aviation Weather Theory", "Aviation Weather Theory Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "Aerodynamics": {
         "search_terms": ["Helicopter Aerodynamics", "Helicopter Specific Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "Airspace": {
         "search_terms": ["Airspace Overview", "Airspace Overview Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "Brownout": {
         "search_terms": ["Flat-light, Whiteout, and Brownout Conditions"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "CFIT": {
         "search_terms": ["Controlled Flight into Terrain Avoidance (CFIT, TAWS, and ALAR) - RW", "Controlled Flight into Terrain Avoidance RW Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "Fire Classes": {
         "search_terms": ["Classes of Fire and Portable Fire Extinguishers", "Portable Fire Extinguisher Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "GPS": {
         "search_terms": ["GPS (RW IFR-VFR)", "GPS (RW IFR) Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "External Lighting": {
         "search_terms": ["Helicopter External Lighting", "Helicopter External Lighting Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial General Subjects Course", "Module 2"],
+        "validity_months": 24
     },
     "METAR and TAF": {
         "search_terms": ["METAR and TAF", "METAR and TAF Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial General Subjects Course", "Module 2"],
+        "validity_months": 24
     },
     "First Aid": {
         "search_terms": ["Physiology and First Aid (RW)", "Physiology and First Aid (RW) Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial General Subjects Course", "Module 2"],
+        "validity_months": 24
     },
     "Runway Incursion": {
         "search_terms": ["Runway Incursion", "Runway Incursion Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial General Subjects Course", "Module 2"],
+        "validity_months": 24
     },
     "Survival": {
         "search_terms": ["Survival", "Survival Exam"],
@@ -94,17 +108,57 @@ subjects = {
     },
     "CRM": {
         "search_terms": ["CRM-ADM - Rotor Wing", "Crew Resource Management - Rotor Wing Exam"],
-        "courses": ["CRM"]
+        "courses": ["CRM"],
+        "validity_months": 12
     },
     "AW139": {
         "search_terms": ["AW-139", "AW-139 Examination"],
-        "courses": ["AW139"]
+        "courses": ["AW139"],
+        "validity_months": 12
     },
     "H145": {
         "search_terms": ["H145 (EC-145T2)"],
-        "courses": ["H145"]
+        "courses": ["H145"],
+        "validity_months": 12
     },
 }
+# --- Expiry Calculation ---
+from dateutil.relativedelta import relativedelta
+
+def calculate_expiry(subject, date_str):
+    """
+    Returns expiry date (datetime) using subject validity and aviation grace month rule.
+    For a subject completed on date_str, expiry is the last day of the month after the validity period ends.
+    """
+    months = subjects.get(subject, {}).get("validity_months", 24)
+    dt = parse_date(date_str)
+    if not dt:
+        return None
+    # Add validity period
+    valid_until = dt + relativedelta(months=months)
+    # Add 1 month for grace, then set to last day of that month
+    grace = valid_until + relativedelta(months=1)
+    # Last day of grace month
+    if grace.month == 12:
+        last_day = 31
+    else:
+        last_day = (datetime(grace.year, grace.month + 1, 1) - relativedelta(days=1)).day
+    grace_end = datetime(grace.year, grace.month, last_day)
+    return grace_end
+
+def format_expiry(expiry_dt, today=None):
+    if not expiry_dt:
+        return 'N/A'
+    if today is None:
+        today = datetime.now()
+    days_left = (expiry_dt - today).days
+    if days_left < 0:
+        color = RED
+    elif days_left <= 60:
+        color = YELLOW
+    else:
+        color = GREEN
+    return f"{color}{expiry_dt.strftime('%d %B %Y')}{RESET}"
 
 # Threshold for "likely" course match (in %)
 LIKELY_THRESHOLD = 70
@@ -136,17 +190,7 @@ month_pattern = re.compile(r'(january|february|march|april|may|june|july|august|
 
 date_pattern = re.compile(r'(\d{1,2}\s*-\s*[a-z]{3}\s*-\s*\d{4})|(\d{4}\s*-\s*[a-z]{3}\s*-\s*\d{1,2})|(\d{1,2}/\d{1,2}/\d{4})', re.I)
 
-def parse_date(date_str):
-    if not date_str:
-        return None
-    date_str = date_str.replace(' ', '')  # Remove spaces
-    formats = ['%d-%b-%Y', '%Y-%b-%d', '%m/%d/%Y']
-    for fmt in formats:
-        try:
-            return datetime.strptime(date_str, fmt)
-        except ValueError:
-            pass
-    return None
+
 
 def format_date(date_str):
     parsed = parse_date(date_str)
@@ -258,14 +302,17 @@ def get_color(status_or_perc):
             return YELLOW
 
 def generate_table(completed):
-    output = "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th></tr></thead><tbody>"
+    output = "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th><th>Expiry</th></tr></thead><tbody>"
+    today = datetime.now()
     for subject, (status, score, base_month, date) in sorted(completed.items()):
         base_str = base_month or 'N/A'
         score_str = score or 'N/A'
         date_str = format_date(date)
         color = get_color(status)
         status_colored = f"{color}{status}{RESET}"
-        output += f"<tr><td>{subject}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
+        expiry_dt = calculate_expiry(subject, date)
+        expiry_str = format_expiry(expiry_dt, today)
+        output += f"<tr><td>{subject}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td><td>{expiry_str}</td></tr>"
     output += "</tbody></table>"
     return output
 
@@ -302,9 +349,11 @@ def generate_courses(results, completed):
                     score_str = score or 'N/A'
                     date_str = format_date(date)
                     status_colored = f"{color}{status}{RESET}"
-                    output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
+                    expiry_dt = calculate_expiry(sub, date)
+                    expiry_str = format_expiry(expiry_dt, datetime.now())
+                    output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td><td>{expiry_str}</td></tr>"
                 else:
-                    output += f"<tr><td>{sub}</td><td>{RED}Not Completed{RESET}</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
+                    output += f"<tr><td>{sub}</td><td>{RED}Not Completed{RESET}</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
             output += "</tbody></table>"
     return output
 
@@ -336,5 +385,7 @@ if uploaded_file is not None:
                 st.markdown(generate_table(completed), unsafe_allow_html=True)
                 results = analyze_courses(completed)
                 st.markdown(generate_courses(results, completed), unsafe_allow_html=True)
+                st.subheader("Subject Assignment Heatmap (last 2 years)")
+                plot_subject_heatmap(completed, window_years=2)
             else:
                 st.warning("No subjects detected in the PDF.")
