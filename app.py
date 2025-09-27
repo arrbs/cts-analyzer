@@ -14,51 +14,63 @@ RESET = '</span>'
 subjects = {
     "ADS-B": {
         "search_terms": ["ADS-B Overview", "ADS-B Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "Weather": {
         "search_terms": ["Aviation Weather Theory", "Aviation Weather Theory Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "Aerodynamics": {
         "search_terms": ["Helicopter Aerodynamics", "Helicopter Specific Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "Airspace": {
         "search_terms": ["Airspace Overview", "Airspace Overview Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "Brownout": {
         "search_terms": ["Flat-light, Whiteout, and Brownout Conditions"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "CFIT": {
         "search_terms": ["Controlled Flight into Terrain Avoidance (CFIT, TAWS, and ALAR) - RW", "Controlled Flight into Terrain Avoidance RW Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "Fire Classes": {
         "search_terms": ["Classes of Fire and Portable Fire Extinguishers", "Portable Fire Extinguisher Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "GPS": {
         "search_terms": ["GPS (RW IFR-VFR)", "GPS (RW IFR) Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial General Subjects Course", "Module 1"],
+        "validity_months": 24
     },
     "External Lighting": {
         "search_terms": ["Helicopter External Lighting", "Helicopter External Lighting Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial General Subjects Course", "Module 2"],
+        "validity_months": 24
     },
     "METAR and TAF": {
         "search_terms": ["METAR and TAF", "METAR and TAF Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial General Subjects Course", "Module 2"],
+        "validity_months": 24
     },
     "First Aid": {
         "search_terms": ["Physiology and First Aid (RW)", "Physiology and First Aid (RW) Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial General Subjects Course", "Module 2"],
+        "validity_months": 24
     },
     "Runway Incursion": {
         "search_terms": ["Runway Incursion", "Runway Incursion Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial General Subjects Course", "Module 2"],
+        "validity_months": 24
     },
     "Survival": {
         "search_terms": ["Survival", "Survival Exam"],
@@ -94,17 +106,44 @@ subjects = {
     },
     "CRM": {
         "search_terms": ["CRM-ADM - Rotor Wing", "Crew Resource Management - Rotor Wing Exam"],
-        "courses": ["CRM"]
+        "courses": ["CRM"],
+        "validity_months": 12
     },
     "AW139": {
         "search_terms": ["AW-139", "AW-139 Examination"],
-        "courses": ["AW139"]
+        "courses": ["AW139"],
+        "validity_months": 12
     },
     "H145": {
         "search_terms": ["H145 (EC-145T2)"],
-        "courses": ["H145"]
+        "courses": ["H145"],
+        "validity_months": 12
     },
 }
+# --- Expiry Calculation ---
+from dateutil.relativedelta import relativedelta
+
+def calculate_expiry(subject, date_str):
+    """
+    Returns expiry date (datetime) using subject validity and grace month rule.
+    """
+    months = subjects.get(subject, {}).get("validity_months", 24)
+    dt = parse_date(date_str)
+    if not dt:
+        return None
+    # Add validity period
+    valid_until = dt + relativedelta(months=months)
+    # Grace month: end of next calendar month
+    grace_month = valid_until.month + 1 if valid_until.month < 12 else 1
+    grace_year = valid_until.year if valid_until.month < 12 else valid_until.year + 1
+    grace_end = datetime(grace_year, grace_month, 1) + relativedelta(months=0, days=-1)
+    # Set to last day of grace month
+    return grace_end
+
+def format_expiry(expiry_dt):
+    if not expiry_dt:
+        return 'N/A'
+    return expiry_dt.strftime('%d %B %Y')
 
 # Threshold for "likely" course match (in %)
 LIKELY_THRESHOLD = 70
@@ -258,14 +297,16 @@ def get_color(status_or_perc):
             return YELLOW
 
 def generate_table(completed):
-    output = "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th></tr></thead><tbody>"
+    output = "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th><th>Expiry</th></tr></thead><tbody>"
     for subject, (status, score, base_month, date) in sorted(completed.items()):
         base_str = base_month or 'N/A'
         score_str = score or 'N/A'
         date_str = format_date(date)
         color = get_color(status)
         status_colored = f"{color}{status}{RESET}"
-        output += f"<tr><td>{subject}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
+        expiry_dt = calculate_expiry(subject, date)
+        expiry_str = format_expiry(expiry_dt)
+        output += f"<tr><td>{subject}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td><td>{expiry_str}</td></tr>"
     output += "</tbody></table>"
     return output
 
@@ -302,9 +343,11 @@ def generate_courses(results, completed):
                     score_str = score or 'N/A'
                     date_str = format_date(date)
                     status_colored = f"{color}{status}{RESET}"
-                    output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
+                    expiry_dt = calculate_expiry(sub, date)
+                    expiry_str = format_expiry(expiry_dt)
+                    output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td><td>{expiry_str}</td></tr>"
                 else:
-                    output += f"<tr><td>{sub}</td><td>{RED}Not Completed{RESET}</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
+                    output += f"<tr><td>{sub}</td><td>{RED}Not Completed{RESET}</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
             output += "</tbody></table>"
     return output
 
