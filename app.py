@@ -1,3 +1,4 @@
+from subject_heatmap import plot_subject_heatmap
 import streamlit as st
 import pdfplumber
 import re
@@ -387,6 +388,8 @@ if uploaded_file is not None:
             username = extract_username(text)
             completed = parse_completed_subjects(text)
             if completed:
+                st.subheader("Subject Assignment Heatmap (last 2 years)")
+                plot_subject_heatmap(completed, window_years=2)
                 if username:
                     st.markdown(f"<h1>Report for {username}</h1>", unsafe_allow_html=True)
                 st.subheader("Subjects Detected")
