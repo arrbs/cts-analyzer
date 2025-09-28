@@ -316,54 +316,18 @@ def analyze_courses(completed):
         results[course_name] = {'completion_percentage': (completed_count / total * 100) if total else 0}
     return results
 
-def process_bulk_pdfs(uploaded_files):
-    """Process multiple PDFs and return the most likely course set with date range and missing subjects."""
-    all_completed_subjects = {}  # Combined subjects from all PDFs
-    pdf_results = []  # Store individual PDF results for analysis
+def analyze_student(completed_subjects, student_name):
+    """Analyze a single student's completed subjects and return best course match with details."""
+    if not completed_subjects:
+        return None
     
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    # Analyze courses for this student
+    results = analyze_courses(completed_subjects)
     
-    # Process each PDF
-    for i, uploaded_file in enumerate(uploaded_files):
-        status_text.text(f"Processing {uploaded_file.name}...")
-        
-        text = extract_text_from_pdf(uploaded_file)
-        if text:
-            completed = parse_completed_subjects(text)
-            if completed:
-                pdf_results.append({
-                    'filename': uploaded_file.name,
-                    'completed': completed
-                })
-                
-                # Merge subjects - keep the one with the latest date if duplicate
-                for subject, (status, score, base_month, date) in completed.items():
-                    if subject not in all_completed_subjects:
-                        all_completed_subjects[subject] = (status, score, base_month, date)
-                    else:
-                        # Keep the entry with the more recent date
-                        existing_date = parse_date(all_completed_subjects[subject][3])
-                        new_date = parse_date(date)
-                        if new_date and (not existing_date or new_date > existing_date):
-                            all_completed_subjects[subject] = (status, score, base_month, date)
-        
-        progress_bar.progress((i + 1) / len(uploaded_files))
-    
-    status_text.text("Analyzing course completion...")
-    
-    if not all_completed_subjects:
-        st.error("No subjects detected in any of the uploaded PDFs.")
-        return
-    
-    # Analyze courses based on combined subjects
-    results = analyze_courses(all_completed_subjects)
+    if not results:
+        return None
     
     # Find the course with highest completion percentage
-    if not results:
-        st.error("No course analysis results available.")
-        return
-    
     sorted_results = sorted(results.items(), key=lambda x: x[1]['completion_percentage'], reverse=True)
     best_course = sorted_results[0]
     best_course_name = best_course[0]
@@ -372,70 +336,150 @@ def process_bulk_pdfs(uploaded_files):
     # Get subjects for the best course
     best_course_subjects = courses[best_course_name]
     
-    # Calculate date range for completed subjects in the best course
+    # Calculate date range and missing subjects for the best course
     completed_dates = []
     missing_subjects = []
+    completed_subjects_in_course = []
     
     for subject in best_course_subjects:
-        if subject in all_completed_subjects and all_completed_subjects[subject][0] == 'PASS':
-            date_str = all_completed_subjects[subject][3]
+        if subject in completed_subjects and completed_subjects[subject][0] == 'PASS':
+            date_str = completed_subjects[subject][3]
             if date_str:
                 parsed_date = parse_date(date_str)
                 if parsed_date:
                     completed_dates.append(parsed_date)
+            completed_subjects_in_course.append(subject)
         else:
             missing_subjects.append(subject)
     
-    # Display results
-    status_text.text("Analysis complete!")
-    
-    st.markdown("---")
-    st.markdown("## Bulk Analysis Results")
-    
-    st.markdown(f"### Most Likely Course Set: **{best_course_name}**")
-    st.markdown(f"**Completion Rate:** {GREEN}{best_completion_percentage:.1f}%{RESET}", unsafe_allow_html=True)
-    
-    # Date range
+    # Determine start and end dates
+    start_date = None
+    end_date = None
     if completed_dates:
         start_date = min(completed_dates).strftime('%d %B %Y')
         end_date = max(completed_dates).strftime('%d %B %Y')
-        if start_date == end_date:
-            st.markdown(f"**Completion Date:** {start_date}")
-        else:
-            st.markdown(f"**Date Range:** {start_date} to {end_date}")
-    else:
-        st.markdown("**Date Range:** No dates available")
     
-    # Missing subjects
-    if missing_subjects:
-        st.markdown("### Missing Subjects:")
-        missing_list = "".join([f"<li>{RED}{subject}{RESET}</li>" for subject in sorted(missing_subjects)])
-        st.markdown(f"<ul>{missing_list}</ul>", unsafe_allow_html=True)
-    else:
-        st.markdown(f"### {GREEN}All subjects completed for this course set!{RESET}", unsafe_allow_html=True)
+    return {
+        'student_name': student_name,
+        'best_course': best_course_name,
+        'completion_percentage': best_completion_percentage,
+        'start_date': start_date,
+        'end_date': end_date,
+        'missing_subjects': missing_subjects,
+        'completed_subjects': completed_subjects,
+        'all_courses': sorted_results
+    }
+
+def process_bulk_pdfs(uploaded_files):
+    """Process multiple PDFs, treating each as a different student."""
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    student_analyses = []
+    
+    # Process each PDF as a different student
+    for i, uploaded_file in enumerate(uploaded_files):
+        status_text.text(f"Processing {uploaded_file.name}...")
+        
+        text = extract_text_from_pdf(uploaded_file)
+        if text:
+            # Extract username if available, otherwise use filename
+            username = extract_username(text)
+            if not username:
+                username = uploaded_file.name.replace('.pdf', '').replace('_', ' ')
+            
+            completed = parse_completed_subjects(text)
+            if completed:
+                analysis = analyze_student(completed, username)
+                if analysis:
+                    analysis['filename'] = uploaded_file.name
+                    student_analyses.append(analysis)
+        
+        progress_bar.progress((i + 1) / len(uploaded_files))
+    
+    status_text.text("Analysis complete!")
+    
+    if not student_analyses:
+        st.error("No subjects detected in any of the uploaded PDFs.")
+        return
+    
+    # Display results for each student
+    st.markdown("---")
+    st.markdown("## Student Analysis Results")
+    st.markdown(f"**Total Students Analyzed:** {len(student_analyses)}")
+    
+    for i, analysis in enumerate(student_analyses, 1):
+        st.markdown("---")
+        
+        # Student header
+        student_display_name = analysis['student_name']
+        if analysis['filename'] != f"{student_display_name}.pdf":
+            student_display_name = f"{student_display_name} ({analysis['filename']})"
+        
+        st.markdown(f"### Student {i}: {student_display_name}")
+        
+        # Most likely course set
+        completion_color = get_color(analysis['completion_percentage'])
+        st.markdown(f"**Most Likely Course Set:** {analysis['best_course']}")
+        st.markdown(f"**Completion Rate:** {completion_color}{analysis['completion_percentage']:.1f}%{RESET}", unsafe_allow_html=True)
+        
+        # Start and finish dates
+        if analysis['start_date'] and analysis['end_date']:
+            if analysis['start_date'] == analysis['end_date']:
+                st.markdown(f"**Completion Date:** {analysis['start_date']}")
+            else:
+                st.markdown(f"**Start Date:** {analysis['start_date']}")
+                st.markdown(f"**Finish Date:** {analysis['end_date']}")
+        else:
+            st.markdown("**Dates:** Not available")
+        
+        # Missing subjects
+        if analysis['missing_subjects']:
+            st.markdown("**Missing Subjects:**")
+            missing_list = "".join([f"<li>{RED}{subject}{RESET}</li>" for subject in sorted(analysis['missing_subjects'])])
+            st.markdown(f"<ul>{missing_list}</ul>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"**{GREEN}All subjects completed for this course set!{RESET}**", unsafe_allow_html=True)
+        
+        # Show completed subjects in expandable section
+        with st.expander(f"View {analysis['student_name']}'s Completed Subjects"):
+            st.markdown(generate_table(analysis['completed_subjects']), unsafe_allow_html=True)
+        
+        # Show all course completion rates in expandable section
+        with st.expander(f"View All Course Completion Rates for {analysis['student_name']}"):
+            for course_name, details in analysis['all_courses']:
+                perc = details['completion_percentage']
+                color = get_color(perc)
+                st.markdown(f"- **{course_name}:** {color}{perc:.1f}%{RESET}", unsafe_allow_html=True)
     
     # Summary statistics
     st.markdown("---")
-    st.markdown("### Summary Statistics")
-    st.markdown(f"- **Total PDFs processed:** {len(pdf_results)}")
-    st.markdown(f"- **Total unique subjects found:** {len(all_completed_subjects)}")
-    st.markdown(f"- **Subjects completed in best course:** {len(best_course_subjects) - len(missing_subjects)}/{len(best_course_subjects)}")
+    st.markdown("### Overall Summary")
     
-    # Optional: Show all course completion rates
-    with st.expander("View All Course Completion Rates"):
-        st.markdown("### All Course Analysis")
-        for course_name, details in sorted_results:
-            perc = details['completion_percentage']
-            color = get_color(perc)
-            st.markdown(f"- **{course_name}:** {color}{perc:.1f}%{RESET}", unsafe_allow_html=True)
+    # Count how many students are in each course type
+    course_counts = {}
+    for analysis in student_analyses:
+        course = analysis['best_course']
+        if course not in course_counts:
+            course_counts[course] = 0
+        course_counts[course] += 1
+    
+    st.markdown("**Students by Most Likely Course Set:**")
+    for course, count in sorted(course_counts.items(), key=lambda x: x[1], reverse=True):
+        st.markdown(f"- **{course}:** {count} student{'s' if count != 1 else ''}")
+    
+    # Average completion rate
+    avg_completion = sum(a['completion_percentage'] for a in student_analyses) / len(student_analyses)
+    avg_color = get_color(avg_completion)
+    st.markdown(f"**Average Completion Rate:** {avg_color}{avg_completion:.1f}%{RESET}", unsafe_allow_html=True)
 
 # Streamlit app
 st.title("PDF Exam Analyzer")
 
 # Mode selection
-mode = st.radio("Select Mode:", ["Single PDF", "Bulk Mode (Multiple PDFs)"], horizontal=True)
+mode = st.radio("Select Mode:", ["Single Student", "Multiple Students"], horizontal=True)
 
-if mode == "Single PDF":
+if mode == "Single Student":
     st.markdown("**Instructions:** Drag and drop your PDF into the box below (or click 'Browse files' to select). Then click 'Process PDF'. Do NOT drop the PDF on the full page—it will open the file instead.")
     uploaded_file = st.file_uploader("Upload PDF", type="pdf")
 
@@ -457,8 +501,11 @@ if mode == "Single PDF":
                 else:
                     st.warning("No subjects detected in the PDF.")
 
-else:  # Bulk Mode
-    st.markdown("**Instructions:** Upload multiple PDF files below. The system will analyze all PDFs and provide the most likely course set with the highest probability across all files.")
+else:  # Multiple Students
+    st.markdown("**Instructions:** Upload multiple PDF files below. Each PDF will be treated as a different student. For each student, the system will analyze and provide:")
+    st.markdown("- The most likely set of subjects (Initial, Module 1, Module 2)")
+    st.markdown("- When it was done (start and finish dates)")
+    st.markdown("- Which subjects are missing")
     uploaded_files = st.file_uploader("Upload PDFs", type="pdf", accept_multiple_files=True)
     
     if uploaded_files:
