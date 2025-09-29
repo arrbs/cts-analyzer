@@ -257,9 +257,16 @@ def get_color(status_or_perc):
         else:
             return YELLOW
 
-def generate_table(completed):
+def generate_table(completed, subject_filter=None):
+    """Generate HTML table for completed subjects, optionally filtered by subject_filter list"""
     output = "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th></tr></thead><tbody>"
-    for subject, (status, score, base_month, date) in sorted(completed.items()):
+    
+    # Filter completed subjects if subject_filter is provided
+    filtered_completed = completed
+    if subject_filter:
+        filtered_completed = {k: v for k, v in completed.items() if k in subject_filter}
+    
+    for subject, (status, score, base_month, date) in sorted(filtered_completed.items()):
         base_str = base_month or 'N/A'
         score_str = score or 'N/A'
         date_str = format_date(date)
@@ -269,7 +276,8 @@ def generate_table(completed):
     output += "</tbody></table>"
     return output
 
-def generate_courses(results, completed):
+def generate_courses(results, completed, subject_filter=None):
+    """Generate HTML for course analysis results, optionally filtered by subject_filter list"""
     sorted_results = sorted(results.items(), key=lambda x: x[1]['completion_percentage'], reverse=True)
     output = "<h3>Likely Lists:</h3><ul>"
     for name, details in sorted_results:
@@ -284,9 +292,11 @@ def generate_courses(results, completed):
             dates = []
             for sub in courses[name]:
                 if sub in completed and completed[sub][0] == 'PASS' and completed[sub][3]:
-                    parsed_date = parse_date(completed[sub][3])
-                    if parsed_date:
-                        dates.append(parsed_date)
+                    # Apply subject filter if provided
+                    if subject_filter is None or sub in subject_filter:
+                        parsed_date = parse_date(completed[sub][3])
+                        if parsed_date:
+                            dates.append(parsed_date)
             if dates:
                 start_date = min(dates).strftime('%d %B %Y')
                 end_date = max(dates).strftime('%d %B %Y')
@@ -295,34 +305,46 @@ def generate_courses(results, completed):
             output += "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th></tr></thead><tbody>"
             all_subs = courses[name]
             for sub in sorted(all_subs):
-                if sub in completed:
-                    status, score, base_mo, date = completed[sub]
-                    color = get_color(status)
-                    base_str = base_mo or 'N/A'
-                    score_str = score or 'N/A'
-                    date_str = format_date(date)
-                    status_colored = f"{color}{status}{RESET}"
-                    output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
-                else:
-                    output += f"<tr><td>{sub}</td><td>{RED}Not Completed{RESET}</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
+                # Apply subject filter if provided
+                if subject_filter is None or sub in subject_filter:
+                    if sub in completed:
+                        status, score, base_mo, date = completed[sub]
+                        color = get_color(status)
+                        base_str = base_mo or 'N/A'
+                        score_str = score or 'N/A'
+                        date_str = format_date(date)
+                        status_colored = f"{color}{status}{RESET}"
+                        output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
+                    else:
+                        output += f"<tr><td>{sub}</td><td>{RED}Not Completed{RESET}</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
             output += "</tbody></table>"
     return output
 
-def analyze_courses(completed):
+def analyze_courses(completed, subject_filter=None):
+    """Analyze course completion, optionally filtered by subject_filter list"""
     results = {}
     for course_name, req_subjects in courses.items():
-        total = len(req_subjects)
-        completed_count = sum(1 for sub in req_subjects if sub in completed and completed[sub][0] == 'PASS')
+        # Filter required subjects if subject_filter is provided
+        if subject_filter:
+            filtered_req_subjects = req_subjects.intersection(set(subject_filter))
+        else:
+            filtered_req_subjects = req_subjects
+            
+        total = len(filtered_req_subjects)
+        if total == 0:
+            continue  # Skip courses with no subjects in the filter
+            
+        completed_count = sum(1 for sub in filtered_req_subjects if sub in completed and completed[sub][0] == 'PASS')
         results[course_name] = {'completion_percentage': (completed_count / total * 100) if total else 0}
     return results
 
-def analyze_student(completed_subjects, student_name):
+def analyze_student(completed_subjects, student_name, subject_filter=None):
     """Analyze a single student's completed subjects and return best course match with details."""
     if not completed_subjects:
         return None
     
-    # Analyze courses for this student
-    results = analyze_courses(completed_subjects)
+    # Analyze courses for this student with filtering
+    results = analyze_courses(completed_subjects, subject_filter)
     
     if not results:
         return None
@@ -335,6 +357,10 @@ def analyze_student(completed_subjects, student_name):
     
     # Get subjects for the best course
     best_course_subjects = courses[best_course_name]
+    
+    # Apply subject filter if provided
+    if subject_filter:
+        best_course_subjects = best_course_subjects.intersection(set(subject_filter))
     
     # Calculate date range and missing subjects for the best course
     completed_dates = []
@@ -370,7 +396,7 @@ def analyze_student(completed_subjects, student_name):
         'all_courses': sorted_results
     }
 
-def process_bulk_pdfs(uploaded_files):
+def process_bulk_pdfs(uploaded_files, subject_filter=None):
     """Process multiple PDFs, treating each as a different student."""
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -390,7 +416,7 @@ def process_bulk_pdfs(uploaded_files):
             
             completed = parse_completed_subjects(text)
             if completed:
-                analysis = analyze_student(completed, username)
+                analysis = analyze_student(completed, username, subject_filter)
                 if analysis:
                     analysis['filename'] = uploaded_file.name
                     student_analyses.append(analysis)
@@ -407,6 +433,10 @@ def process_bulk_pdfs(uploaded_files):
     st.markdown("---")
     st.markdown("## Student Analysis Results")
     st.markdown(f"**Total Students Analyzed:** {len(student_analyses)}")
+    
+    # Show filter status if applied
+    if subject_filter:
+        st.markdown(f"**Filtered by subjects:** {', '.join(sorted(subject_filter))}")
     
     for i, analysis in enumerate(student_analyses, 1):
         st.markdown("---")
@@ -443,7 +473,7 @@ def process_bulk_pdfs(uploaded_files):
         
         # Show completed subjects in expandable section
         with st.expander(f"View {analysis['student_name']}'s Completed Subjects"):
-            st.markdown(generate_table(analysis['completed_subjects']), unsafe_allow_html=True)
+            st.markdown(generate_table(analysis['completed_subjects'], subject_filter), unsafe_allow_html=True)
         
         # Show all course completion rates in expandable section
         with st.expander(f"View All Course Completion Rates for {analysis['student_name']}"):
@@ -479,6 +509,23 @@ st.title("PDF Exam Analyzer")
 # Mode selection
 mode = st.radio("Select Mode:", ["Single Student", "Multiple Students"], horizontal=True)
 
+# Subject filter - available in both modes
+st.markdown("---")
+st.markdown("**Optional Subject Filter**: Select specific subjects you're interested in (e.g., CRM, SMS). Leave empty to analyze all subjects.")
+
+# Get all subject names and sort them
+all_subjects = sorted(subjects.keys())
+selected_subjects = st.multiselect(
+    "Select subjects of interest (optional):",
+    all_subjects,
+    help="Choose subjects you want to focus on. If none selected, all detected subjects will be analyzed."
+)
+
+# Convert to None if empty for easier handling
+subject_filter = selected_subjects if selected_subjects else None
+
+st.markdown("---")
+
 if mode == "Single Student":
     st.markdown("**Instructions:** Drag and drop your PDF into the box below (or click 'Browse files' to select). Then click 'Process PDF'. Do NOT drop the PDF on the full page—it will open the file instead.")
     uploaded_file = st.file_uploader("Upload PDF", type="pdf")
@@ -494,10 +541,30 @@ if mode == "Single Student":
                 if completed:
                     if username:
                         st.markdown(f"<h1>Report for {username}</h1>", unsafe_allow_html=True)
-                    st.subheader("Subjects Detected")
-                    st.markdown(generate_table(completed), unsafe_allow_html=True)
-                    results = analyze_courses(completed)
-                    st.markdown(generate_courses(results, completed), unsafe_allow_html=True)
+                    
+                    # Show filter status if applied
+                    if subject_filter:
+                        st.markdown(f"**Analyzing subjects:** {', '.join(sorted(subject_filter))}")
+                        # Check if any filtered subjects were found
+                        filtered_completed = {k: v for k, v in completed.items() if k in subject_filter}
+                        if not filtered_completed:
+                            st.warning(f"None of the selected subjects ({', '.join(sorted(subject_filter))}) were found in this PDF.")
+                            st.markdown("**All detected subjects:**")
+                            st.markdown(", ".join(sorted(completed.keys())))
+                        else:
+                            # Show results only if filtered subjects were found
+                            st.subheader("Subjects Detected")
+                            st.markdown(generate_table(completed, subject_filter), unsafe_allow_html=True)
+                            results = analyze_courses(completed, subject_filter)
+                            if results:  # Only show if there are results
+                                st.markdown(generate_courses(results, completed, subject_filter), unsafe_allow_html=True)
+                    else:
+                        # No filter applied, show all results
+                        st.subheader("Subjects Detected")
+                        st.markdown(generate_table(completed, subject_filter), unsafe_allow_html=True)
+                        results = analyze_courses(completed, subject_filter)
+                        if results:  # Only show if there are results
+                            st.markdown(generate_courses(results, completed, subject_filter), unsafe_allow_html=True)
                 else:
                     st.warning("No subjects detected in the PDF.")
 
@@ -511,4 +578,4 @@ else:  # Multiple Students
     if uploaded_files:
         st.write(f"Uploaded {len(uploaded_files)} PDF(s)")
         if st.button("Process All PDFs"):
-            process_bulk_pdfs(uploaded_files)
+            process_bulk_pdfs(uploaded_files, subject_filter)
