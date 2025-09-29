@@ -504,60 +504,120 @@ def process_bulk_pdfs(uploaded_files, subject_filter=None):
         
         st.markdown(f"### Student {i}: {student_display_name}")
         
-        # Most likely course set
-        completion_color = get_color(analysis['completion_percentage'])
-        st.markdown(f"**Most Likely Course Set:** {analysis['best_course']}")
-        st.markdown(f"**Completion Rate:** {completion_color}{analysis['completion_percentage']:.1f}%{RESET}", unsafe_allow_html=True)
-        
-        # Start and finish dates
-        if analysis['start_date'] and analysis['end_date']:
-            if analysis['start_date'] == analysis['end_date']:
-                st.markdown(f"**Completion Date:** {analysis['start_date']}")
+        if subject_filter:
+            # When filter is applied, show simple filtered results instead of "most likely" suggestions
+            filtered_completed = {k: v for k, v in analysis['completed_subjects'].items() if k in subject_filter}
+            
+            if filtered_completed:
+                st.markdown("**Filtered Subjects:**")
+                st.markdown(generate_table(filtered_completed, subject_filter), unsafe_allow_html=True)
+                
+                # Show completion statistics for filtered subjects
+                total_filtered = len(subject_filter)
+                completed_filtered = len(filtered_completed)
+                completion_rate = (completed_filtered / total_filtered * 100) if total_filtered > 0 else 0
+                completion_color = get_color(completion_rate)
+                st.markdown(f"**Completion Rate for Selected Subjects:** {completion_color}{completion_rate:.1f}% ({completed_filtered}/{total_filtered}){RESET}", unsafe_allow_html=True)
+                
+                # Show missing subjects from the filter
+                missing_from_filter = [subj for subj in subject_filter if subj not in filtered_completed]
+                if missing_from_filter:
+                    st.markdown("**Missing from Selected Subjects:**")
+                    missing_list = "".join([f"<li>{RED}{subject}{RESET}</li>" for subject in sorted(missing_from_filter)])
+                    st.markdown(f"<ul>{missing_list}</ul>", unsafe_allow_html=True)
             else:
-                st.markdown(f"**Start Date:** {analysis['start_date']}")
-                st.markdown(f"**Finish Date:** {analysis['end_date']}")
+                st.markdown(f"**{RED}No selected subjects found for this student{RESET}**", unsafe_allow_html=True)
+                
+            # Show all detected subjects in expandable section
+            if analysis['completed_subjects']:
+                with st.expander(f"View All Detected Subjects for {analysis['student_name']}"):
+                    st.markdown(generate_table(analysis['completed_subjects']), unsafe_allow_html=True)
         else:
-            st.markdown("**Dates:** Not available")
-        
-        # Missing subjects
-        if analysis['missing_subjects']:
-            st.markdown("**Missing Subjects:**")
-            missing_list = "".join([f"<li>{RED}{subject}{RESET}</li>" for subject in sorted(analysis['missing_subjects'])])
-            st.markdown(f"<ul>{missing_list}</ul>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"**{GREEN}All subjects completed for this course set!{RESET}**", unsafe_allow_html=True)
-        
-        # Show completed subjects in expandable section
-        with st.expander(f"View {analysis['student_name']}'s Completed Subjects"):
-            st.markdown(generate_table(analysis['completed_subjects'], subject_filter), unsafe_allow_html=True)
-        
-        # Show all course completion rates in expandable section
-        with st.expander(f"View All Course Completion Rates for {analysis['student_name']}"):
-            for course_name, details in analysis['all_courses']:
-                perc = details['completion_percentage']
-                color = get_color(perc)
-                st.markdown(f"- **{course_name}:** {color}{perc:.1f}%{RESET}", unsafe_allow_html=True)
+            # Original behavior when no filter is applied - show "most likely" course suggestions
+            # Most likely course set
+            completion_color = get_color(analysis['completion_percentage'])
+            st.markdown(f"**Most Likely Course Set:** {analysis['best_course']}")
+            st.markdown(f"**Completion Rate:** {completion_color}{analysis['completion_percentage']:.1f}%{RESET}", unsafe_allow_html=True)
+            
+            # Start and finish dates
+            if analysis['start_date'] and analysis['end_date']:
+                if analysis['start_date'] == analysis['end_date']:
+                    st.markdown(f"**Completion Date:** {analysis['start_date']}")
+                else:
+                    st.markdown(f"**Start Date:** {analysis['start_date']}")
+                    st.markdown(f"**Finish Date:** {analysis['end_date']}")
+            else:
+                st.markdown("**Dates:** Not available")
+            
+            # Missing subjects
+            if analysis['missing_subjects']:
+                st.markdown("**Missing Subjects:**")
+                missing_list = "".join([f"<li>{RED}{subject}{RESET}</li>" for subject in sorted(analysis['missing_subjects'])])
+                st.markdown(f"<ul>{missing_list}</ul>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"**{GREEN}All subjects completed for this course set!{RESET}**", unsafe_allow_html=True)
+            
+            # Show completed subjects in expandable section
+            with st.expander(f"View {analysis['student_name']}'s Completed Subjects"):
+                st.markdown(generate_table(analysis['completed_subjects'], subject_filter), unsafe_allow_html=True)
+            
+            # Show all course completion rates in expandable section
+            with st.expander(f"View All Course Completion Rates for {analysis['student_name']}"):
+                for course_name, details in analysis['all_courses']:
+                    perc = details['completion_percentage']
+                    color = get_color(perc)
+                    st.markdown(f"- **{course_name}:** {color}{perc:.1f}%{RESET}", unsafe_allow_html=True)
     
     # Summary statistics
     st.markdown("---")
     st.markdown("### Overall Summary")
     
-    # Count how many students are in each course type
-    course_counts = {}
-    for analysis in student_analyses:
-        course = analysis['best_course']
-        if course not in course_counts:
-            course_counts[course] = 0
-        course_counts[course] += 1
-    
-    st.markdown("**Students by Most Likely Course Set:**")
-    for course, count in sorted(course_counts.items(), key=lambda x: x[1], reverse=True):
-        st.markdown(f"- **{course}:** {count} student{'s' if count != 1 else ''}")
-    
-    # Average completion rate
-    avg_completion = sum(a['completion_percentage'] for a in student_analyses) / len(student_analyses)
-    avg_color = get_color(avg_completion)
-    st.markdown(f"**Average Completion Rate:** {avg_color}{avg_completion:.1f}%{RESET}", unsafe_allow_html=True)
+    if subject_filter:
+        # For filtered mode, show statistics about the selected subjects
+        total_students = len(student_analyses)
+        completion_rates = []
+        
+        for analysis in student_analyses:
+            filtered_completed = {k: v for k, v in analysis['completed_subjects'].items() if k in subject_filter}
+            total_filtered = len(subject_filter)
+            completed_filtered = len(filtered_completed)
+            completion_rate = (completed_filtered / total_filtered * 100) if total_filtered > 0 else 0
+            completion_rates.append(completion_rate)
+        
+        # Calculate how many students have completed each filtered subject
+        subject_completion_counts = {}
+        for subject in subject_filter:
+            count = sum(1 for analysis in student_analyses if subject in analysis['completed_subjects'])
+            subject_completion_counts[subject] = count
+        
+        st.markdown(f"**Selected Subjects Completion Summary:**")
+        for subject, count in sorted(subject_completion_counts.items(), key=lambda x: x[1], reverse=True):
+            percentage = (count / total_students * 100) if total_students > 0 else 0
+            color = get_color(percentage)
+            st.markdown(f"- **{subject}:** {color}{count}/{total_students} students ({percentage:.1f}%){RESET}", unsafe_allow_html=True)
+        
+        # Average completion rate for selected subjects
+        avg_completion = sum(completion_rates) / len(completion_rates) if completion_rates else 0
+        avg_color = get_color(avg_completion)
+        st.markdown(f"**Average Completion Rate for Selected Subjects:** {avg_color}{avg_completion:.1f}%{RESET}", unsafe_allow_html=True)
+    else:
+        # Original behavior when no filter is applied
+        # Count how many students are in each course type
+        course_counts = {}
+        for analysis in student_analyses:
+            course = analysis['best_course']
+            if course not in course_counts:
+                course_counts[course] = 0
+            course_counts[course] += 1
+        
+        st.markdown("**Students by Most Likely Course Set:**")
+        for course, count in sorted(course_counts.items(), key=lambda x: x[1], reverse=True):
+            st.markdown(f"- **{course}:** {count} student{'s' if count != 1 else ''}")
+        
+        # Average completion rate
+        avg_completion = sum(a['completion_percentage'] for a in student_analyses) / len(student_analyses)
+        avg_color = get_color(avg_completion)
+        st.markdown(f"**Average Completion Rate:** {avg_color}{avg_completion:.1f}%{RESET}", unsafe_allow_html=True)
 
 # Streamlit app
 st.title("PDF Exam Analyzer")
