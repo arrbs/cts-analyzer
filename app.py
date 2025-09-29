@@ -2,7 +2,7 @@ import streamlit as st
 import pdfplumber
 import re
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # HTML color spans
 GREEN = '<span style="color:green">'
@@ -257,6 +257,52 @@ def get_color(status_or_perc):
         else:
             return YELLOW
 
+def get_date_color(date_str):
+    """
+    Calculate date-based color for subject completion dates.
+    Color transitions from lime green (fresh) to amber (6 months) to red (near expiry).
+    Assumes validity period is approximately 24 months from completion.
+    """
+    if not date_str or date_str == 'N/A':
+        return ''  # No color for invalid dates
+    
+    parsed_date = parse_date(date_str)
+    if not parsed_date:
+        return ''  # No color for unparseable dates
+    
+    now = datetime.now()
+    days_since = (now - parsed_date).days
+    
+    # Define color transition points
+    # 0 days = bright lime green
+    # 6 months (180 days) = amber
+    # 24 months (730 days) = red (approaching validity end)
+    
+    if days_since < 0:
+        # Future date - lime green
+        return '<span style="color:#32FF32">'  # Bright lime green
+    elif days_since <= 180:  # 0-6 months
+        # Transition from lime green to amber
+        # Lime green: #32FF32 (RGB: 50, 255, 50)
+        # Amber: #FFBF00 (RGB: 255, 191, 0)
+        ratio = days_since / 180
+        red = int(50 + (255 - 50) * ratio)
+        green = int(255 - (255 - 191) * ratio)
+        blue = int(50 - 50 * ratio)
+        return f'<span style="color:rgb({red},{green},{blue})">'
+    elif days_since <= 730:  # 6-24 months
+        # Transition from amber to red
+        # Amber: #FFBF00 (RGB: 255, 191, 0)
+        # Red: #FF0000 (RGB: 255, 0, 0)
+        ratio = (days_since - 180) / (730 - 180)
+        red = 255  # Stay at 255
+        green = int(191 * (1 - ratio))
+        blue = 0  # Stay at 0
+        return f'<span style="color:rgb({red},{green},{blue})">'
+    else:  # Over 24 months
+        # Solid red
+        return '<span style="color:#FF0000">'
+
 def generate_table(completed, subject_filter=None):
     """Generate HTML table for completed subjects, optionally filtered by subject_filter list"""
     output = "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th></tr></thead><tbody>"
@@ -272,7 +318,12 @@ def generate_table(completed, subject_filter=None):
         date_str = format_date(date)
         color = get_color(status)
         status_colored = f"{color}{status}{RESET}"
-        output += f"<tr><td>{subject}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
+        
+        # Apply date-based color to the date column
+        date_color = get_date_color(date)
+        date_colored = f"{date_color}{date_str}{RESET}" if date_color else date_str
+        
+        output += f"<tr><td>{subject}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_colored}</td></tr>"
     output += "</tbody></table>"
     return output
 
@@ -314,7 +365,12 @@ def generate_courses(results, completed, subject_filter=None):
                         score_str = score or 'N/A'
                         date_str = format_date(date)
                         status_colored = f"{color}{status}{RESET}"
-                        output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
+                        
+                        # Apply date-based color to the date column
+                        date_color = get_date_color(date)
+                        date_colored = f"{date_color}{date_str}{RESET}" if date_color else date_str
+                        
+                        output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_colored}</td></tr>"
                     else:
                         output += f"<tr><td>{sub}</td><td>{RED}Not Completed{RESET}</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
             output += "</tbody></table>"
