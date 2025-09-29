@@ -452,7 +452,7 @@ def analyze_student(completed_subjects, student_name, subject_filter=None):
         'all_courses': sorted_results
     }
 
-def process_bulk_pdfs(uploaded_files, subject_filter=None):
+def process_bulk_pdfs(uploaded_files, subject_filter=None, detailed_analysis=False):
     """Process multiple PDFs, treating each as a different student."""
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -494,6 +494,15 @@ def process_bulk_pdfs(uploaded_files, subject_filter=None):
     if subject_filter:
         st.markdown(f"**Filtered by subjects:** {', '.join(sorted(subject_filter))}")
     
+    if detailed_analysis:
+        # Detailed Analysis Mode - One page per student with navigation
+        process_detailed_analysis(student_analyses, subject_filter)
+    else:
+        # Original summary mode
+        process_summary_analysis(student_analyses, subject_filter)
+
+def process_summary_analysis(student_analyses, subject_filter):
+    """Process and display summary analysis for all students"""
     for i, analysis in enumerate(student_analyses, 1):
         st.markdown("---")
         
@@ -619,6 +628,75 @@ def process_bulk_pdfs(uploaded_files, subject_filter=None):
         avg_color = get_color(avg_completion)
         st.markdown(f"**Average Completion Rate:** {avg_color}{avg_completion:.1f}%{RESET}", unsafe_allow_html=True)
 
+def process_detailed_analysis(student_analyses, subject_filter):
+    """Process and display detailed analysis for individual students with navigation"""
+    
+    # Initialize session state for navigation
+    if 'current_student_index' not in st.session_state:
+        st.session_state.current_student_index = 0
+    
+    total_students = len(student_analyses)
+    current_index = st.session_state.current_student_index
+    
+    # Navigation controls
+    col1, col2, col3, col4, col5 = st.columns([1, 1, 2, 1, 1])
+    
+    with col1:
+        if st.button("⬅️ Previous", disabled=(current_index == 0)):
+            st.session_state.current_student_index = max(0, current_index - 1)
+            st.rerun()
+    
+    with col2:
+        if st.button("➡️ Next", disabled=(current_index == total_students - 1)):
+            st.session_state.current_student_index = min(total_students - 1, current_index + 1)
+            st.rerun()
+    
+    with col3:
+        st.markdown(f"**Student {current_index + 1} of {total_students}**")
+    
+    with col4:
+        # Student selection dropdown
+        student_names = [f"{i+1}: {analysis['student_name']}" for i, analysis in enumerate(student_analyses)]
+        selected_index = st.selectbox(
+            "Jump to student:",
+            range(total_students),
+            index=current_index,
+            format_func=lambda i: student_names[i],
+            key="student_selector"
+        )
+        if selected_index != current_index:
+            st.session_state.current_student_index = selected_index
+            st.rerun()
+    
+    with col5:
+        if st.button("🔄 Refresh"):
+            st.rerun()
+    
+    # Current student analysis
+    analysis = student_analyses[current_index]
+    
+    st.markdown("---")
+    
+    # Student header
+    student_display_name = analysis['student_name']
+    if analysis['filename'] != f"{student_display_name}.pdf":
+        student_display_name = f"{student_display_name} ({analysis['filename']})"
+    
+    st.markdown(f"# Student {current_index + 1}: {student_display_name}")
+    
+    # Show all subjects this student has written (similar to single student mode)
+    completed = analysis['completed_subjects']
+    if completed:
+        st.subheader("Subjects Detected")
+        st.markdown(generate_table(completed, subject_filter), unsafe_allow_html=True)
+        
+        # Analyze courses for this student and show detailed results
+        results = analyze_courses(completed, subject_filter)
+        if results:
+            st.markdown(generate_courses(results, completed, subject_filter), unsafe_allow_html=True)
+    else:
+        st.warning("No subjects detected for this student.")
+
 # Streamlit app
 st.title("PDF Exam Analyzer")
 
@@ -689,9 +767,17 @@ else:  # Multiple Students
     st.markdown("- The most likely set of subjects (Initial, Module 1, Module 2)")
     st.markdown("- When it was done (start and finish dates)")
     st.markdown("- Which subjects are missing")
+    
+    # Add detailed analysis toggle
+    detailed_analysis = st.checkbox(
+        "Detailed Analysis Mode", 
+        value=False,
+        help="Show detailed analysis for each student with full course breakdown, similar to single student mode. Includes navigation between students."
+    )
+    
     uploaded_files = st.file_uploader("Upload PDFs", type="pdf", accept_multiple_files=True)
     
     if uploaded_files:
         st.write(f"Uploaded {len(uploaded_files)} PDF(s)")
         if st.button("Process All PDFs"):
-            process_bulk_pdfs(uploaded_files, subject_filter)
+            process_bulk_pdfs(uploaded_files, subject_filter, detailed_analysis)
