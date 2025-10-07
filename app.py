@@ -14,95 +14,83 @@ RESET = '</span>'
 subjects = {
     "ADS-B": {
         "search_terms": ["ADS-B Overview", "ADS-B Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Module 1 (P121)"]
     },
     "Weather": {
         "search_terms": ["Aviation Weather Theory", "Aviation Weather Theory Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Module 1 (P121)"]
     },
     "Aerodynamics": {
         "search_terms": ["Helicopter Aerodynamics", "Helicopter Specific Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Module 1 (P121)"]
     },
     "Airspace": {
         "search_terms": ["Airspace Overview", "Airspace Overview Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Module 1 (P121)"]
     },
     "Brownout": {
         "search_terms": ["Flat-light, Whiteout, and Brownout Conditions"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Module 1 (P121)"]
     },
     "CFIT": {
         "search_terms": ["Controlled Flight into Terrain Avoidance (CFIT, TAWS, and ALAR) - RW", "Controlled Flight into Terrain Avoidance RW Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Even Year (P135)", "Module 1 (P121)"]
     },
     "Fire Classes": {
         "search_terms": ["Classes of Fire and Portable Fire Extinguishers", "Portable Fire Extinguisher Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial (P121)", "Module 1 (P121)"]
     },
     "GPS": {
         "search_terms": ["GPS (RW IFR-VFR)", "GPS (RW IFR) Exam"],
-        "courses": ["Initial General Subjects Course", "Module 1"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Module 1 (P121)"]
     },
     "External Lighting": {
         "search_terms": ["Helicopter External Lighting", "Helicopter External Lighting Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Module 2 (121)"]
     },
     "METAR and TAF": {
         "search_terms": ["METAR and TAF", "METAR and TAF Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Even Year (P135)", "Module 2 (121)"]
     },
     "First Aid": {
         "search_terms": ["Physiology and First Aid (RW)", "Physiology and First Aid (RW) Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Even Year (P135)", "Module 1 (P121)", "Module 2 (121)"]
     },
     "Runway Incursion": {
         "search_terms": ["Runway Incursion", "Runway Incursion Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Even Year (P135)", "Module 2 (121)"]
     },
     "Survival": {
         "search_terms": ["Survival", "Survival Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Even Year (P135)", "Module 2 (121)"]
     },
     "Traffic Advisory System": {
         "search_terms": ["Traffic Advisory System (TAS)", "Traffic Advisory System"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Even Year (P135)", "Module 2 (121)"]
     },
     "Traffic Collision Avoidance System": {
         "search_terms": ["TCAS II ", "Traffic Collision Avoidance System (TCASII)", "TCAS II - Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Even Year (P135)", "Module 2 (121)"]
     },
     "Windshear": {
         "search_terms": ["Windshear (RW)", "Helicopter Windshear Exam"],
-        "courses": ["Initial General Subjects Course", "Module 2"]
-    },
-    "Wire Strike Prevention": {
-        "search_terms": ["Wire Strike Prevention", "Wire Strike Prevention Exam"],
-        "courses": ["Wire Strike Prevention"]
-    },
-    "Basic Indoc": {
-        "search_terms": ["The Helicopter and Jet Company - Indoc (NEW)", "The Helicopter Company - Indoc - SUPERCEDED", "THC - Indoc - EXAM"],
-        "courses": ["Basic Indoc"]
-    },
-    "SMS": {
-        "search_terms": ["The Helicopter and Jet Company - SMS", "THC - SMS Exam", "SMS Exam"],
-        "courses": ["SMS"]
-    },
-    "Hazmat": {
-        "search_terms": ["Hazmat - Will Not Carry", "Hazmat Will Not Carry Exam"],
-        "courses": ["Dangerous Goods"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Even Year (P135)", "Module 2 (121)"]
     },
     "CRM": {
         "search_terms": ["CRM-ADM - Rotor Wing", "Crew Resource Management - Rotor Wing Exam"],
-        "courses": ["CRM"]
+        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Even Year (P135)", "Module 1 (P121)", "Module 2 (121)"]
     },
-    "AW139": {
-        "search_terms": ["AW-139", "AW-139 Examination"],
-        "courses": ["AW139"]
+    "Basic Indoc": {
+        "search_terms": ["The Helicopter and Jet Company - Indoc (NEW)", "The Helicopter Company - Indoc - SUPERCEDED", "THC - Indoc - EXAM"],
+        "courses": ["Initial (P121)", "Initial (P135)"]
     },
-    "H145": {
-        "search_terms": ["H145 (EC-145T2)"],
-        "courses": ["H145"]
+    "SMS": {
+        "search_terms": ["The Helicopter and Jet Company - SMS", "THC - SMS Exam", "SMS Exam"],
+        "courses": ["Initial (P121)", "Initial (P135)", "DG + SMS"]
+    },
+    "Hazmat": {
+        "search_terms": ["Hazmat - Will Not Carry", "Hazmat Will Not Carry Exam"],
+        "courses": ["Initial (P121)", "Initial (P135)", "DG + SMS"]
     },
 }
 
@@ -270,50 +258,89 @@ def generate_table(completed):
     return output
 
 def generate_courses(results, completed):
-    sorted_results = sorted(results.items(), key=lambda x: x[1]['completion_percentage'], reverse=True)
-    output = "<h3>Likely Lists:</h3><ul>"
-    for name, details in sorted_results:
-        perc = details['completion_percentage']
-        color = get_color(perc)
-        output += f"<li>{name}: {color}{perc:.0f}%{RESET}</li>"
-    output += "</ul><h3>List Details:</h3>"
-    for name, details in sorted_results:
-        if details['completion_percentage'] > 0:
-            perc = details['completion_percentage']
-            date_info = ""
-            dates = []
-            for sub in courses[name]:
-                if sub in completed and completed[sub][0] == 'PASS' and completed[sub][3]:
-                    parsed_date = parse_date(completed[sub][3])
-                    if parsed_date:
-                        dates.append(parsed_date)
-            if dates:
-                start_date = min(dates).strftime('%d %B %Y')
-                end_date = max(dates).strftime('%d %B %Y')
-                date_info = f" - Start: {start_date}, End: {end_date}"
-            output += f"<p><strong>{name}: {perc:.0f}%{date_info}</strong></p>"
-            output += "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th></tr></thead><tbody>"
-            all_subs = courses[name]
-            for sub in sorted(all_subs):
-                if sub in completed:
-                    status, score, base_mo, date = completed[sub]
-                    color = get_color(status)
-                    base_str = base_mo or 'N/A'
-                    score_str = score or 'N/A'
-                    date_str = format_date(date)
-                    status_colored = f"{color}{status}{RESET}"
-                    output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
-                else:
-                    output += f"<tr><td>{sub}</td><td>{RED}Not Completed{RESET}</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
-            output += "</tbody></table>"
+    # Group courses
+    course_groups = {
+        'P121 Courses': ['Initial (P121)', 'Module 1 (P121)', 'Module 2 (121)'],
+        'P135 Courses': ['Initial (P135)', 'Odd Year (P135)', 'Even Year (P135)'],
+        'Other': ['DG + SMS']
+    }
+    
+    output = "<h3>Likely Lists (Most Likely in Each Group):</h3>"
+    
+    # For each group, find the most likely course
+    for group_name, course_list in course_groups.items():
+        output += f"<h4>{group_name}:</h4><ul>"
+        group_results = [(name, results[name]['completion_percentage']) for name in course_list if name in results]
+        group_results.sort(key=lambda x: x[1], reverse=True)
+        
+        for i, (name, perc) in enumerate(group_results):
+            color = get_color(perc)
+            # Highlight the most likely (first one after sorting)
+            if i == 0 and perc > 0:
+                output += f"<li><strong>⭐ {name}: {color}{perc:.0f}%{RESET}</strong> (Most Likely)</li>"
+            else:
+                output += f"<li>{name}: {color}{perc:.0f}%{RESET}</li>"
+        output += "</ul>"
+    
+    output += "<h3>List Details:</h3>"
+    
+    # Show details for each group
+    for group_name, course_list in course_groups.items():
+        output += f"<h4>{group_name}:</h4>"
+        group_results = [(name, results[name]['completion_percentage']) for name in course_list if name in results]
+        group_results.sort(key=lambda x: x[1], reverse=True)
+        
+        for name, perc in group_results:
+            if perc > 0:
+                date_info = ""
+                dates = []
+                for sub in courses[name]:
+                    if sub in completed and completed[sub][0] == 'PASS' and completed[sub][3]:
+                        parsed_date = parse_date(completed[sub][3])
+                        if parsed_date:
+                            dates.append(parsed_date)
+                if dates:
+                    start_date = min(dates).strftime('%d %B %Y')
+                    end_date = max(dates).strftime('%d %B %Y')
+                    date_info = f" - Start: {start_date}, End: {end_date}"
+                output += f"<p><strong>{name}: {perc:.0f}%{date_info}</strong></p>"
+                output += "<table><thead><tr><th>Subject</th><th>Status</th><th>Score</th><th>Base Month</th><th>Date</th></tr></thead><tbody>"
+                all_subs = courses[name]
+                for sub in sorted(all_subs):
+                    if sub in completed:
+                        status, score, base_mo, date = completed[sub]
+                        color = get_color(status)
+                        base_str = base_mo or 'N/A'
+                        score_str = score or 'N/A'
+                        date_str = format_date(date)
+                        status_colored = f"{color}{status}{RESET}"
+                        output += f"<tr><td>{sub}</td><td>{status_colored}</td><td>{score_str}</td><td>{base_str}</td><td>{date_str}</td></tr>"
+                    else:
+                        output += f"<tr><td>{sub}</td><td>{RED}Not Completed{RESET}</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
+                output += "</tbody></table>"
     return output
 
 def analyze_courses(completed):
     results = {}
+    total_passed = len([s for s in completed if completed[s][0] == 'PASS'])
+    
     for course_name, req_subjects in courses.items():
         total = len(req_subjects)
         completed_count = sum(1 for sub in req_subjects if sub in completed and completed[sub][0] == 'PASS')
-        results[course_name] = {'completion_percentage': (completed_count / total * 100) if total else 0}
+        completion_perc = (completed_count / total * 100) if total else 0
+        
+        # Smart classification: if a student passed MORE subjects than exist in this course,
+        # and got 100% of this course, they likely took a larger course
+        # Penalize smaller courses when student has passed many more subjects
+        penalty = 0
+        if completion_perc == 100 and total_passed > total:
+            # The more extra subjects they passed, the less likely this smaller course is
+            extra_subjects = total_passed - total
+            penalty = min(extra_subjects * 5, 40)  # Max 40% penalty
+        
+        adjusted_perc = max(0, completion_perc - penalty)
+        results[course_name] = {'completion_percentage': adjusted_perc}
+    
     return results
 
 # Streamlit app
