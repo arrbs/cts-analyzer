@@ -573,14 +573,14 @@ def generate_obsidian_markdown():
                         sms_completed = True
                         sms_date = parsed_date
         
-        # Check if DG + SMS needs to be assigned (13+ months or missing)
+        # Check if DG + SMS needs to be assigned (24+ months or missing)
         needs_dg_sms = False
         if not dg_completed or not sms_completed:
             needs_dg_sms = True
         elif dg_date and sms_date:
             most_recent = max(dg_date, sms_date)
             months_ago = (datetime.now() - most_recent).days / 30.44  # Average month length
-            if months_ago > 13:
+            if months_ago > 24:
                 needs_dg_sms = True
         
         if needs_dg_sms:
@@ -666,7 +666,7 @@ def generate_obsidian_markdown():
         
         # Action items
         md += "**Action Items:**\n"
-        md += "- [ ] Assigned in CTS\n"
+        md += "- [ ] Updated in CTS\n"
         
         # Add next assignments
         if next_assignments:
