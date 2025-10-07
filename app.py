@@ -669,27 +669,16 @@ def generate_obsidian_markdown():
         # Action items
         md += "**Action Items:**\n"
         md += "- [ ] Updated in CTS\n"
+        md += "- [ ] Updated in FleetPlan\n"
         
-        # Add next assignments with detailed breakdown
-        if next_assignments or missing_subjects or failed_subjects:
+        # Add next assignments
+        if next_assignments:
             md += "\n**Next to Assign:**\n"
             
             # List each course/module
             for assignment in next_assignments:
                 md += f"- [ ] {assignment}\n"
-            
-            # List specific missing/failed subjects that need to be assigned
-            if missing_subjects or failed_subjects:
-                md += "\n**Specific Missing/Failed Subjects to Assign:**\n"
-                for subj in missing_subjects:
-                    # Extract just the subject name without the course context
-                    subject_name = subj.split(' (for ')[0]
-                    md += f"- [ ] {subject_name}\n"
-                for subj in failed_subjects:
-                    subject_name = subj.split(' (for ')[0]
-                    md += f"- [ ] {subject_name}\n"
         
-        md += "\n- [ ] Updated in FleetPlan\n"
         md += "\n---\n\n"
     
     return md
