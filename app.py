@@ -573,14 +573,16 @@ def generate_obsidian_markdown():
                         sms_completed = True
                         sms_date = parsed_date
         
-        # Check if DG + SMS needs to be assigned (24+ months or missing)
+        # Check if DG + SMS needs to be assigned for NEXT cycle
+        # If done >12 months ago, still valid now but needs assigning for next time
+        # If >24 months, expired and needs immediate assignment
         needs_dg_sms = False
         if not dg_completed or not sms_completed:
             needs_dg_sms = True
         elif dg_date and sms_date:
             most_recent = max(dg_date, sms_date)
             months_ago = (datetime.now() - most_recent).days / 30.44  # Average month length
-            if months_ago > 24:
+            if months_ago > 12:  # If over 12 months, will need it for next cycle
                 needs_dg_sms = True
         
         if needs_dg_sms:
@@ -668,14 +670,24 @@ def generate_obsidian_markdown():
         md += "**Action Items:**\n"
         md += "- [ ] Updated in CTS\n"
         
-        # Add next assignments
-        if next_assignments:
+        # Add next assignments with detailed breakdown
+        if next_assignments or missing_subjects or failed_subjects:
             md += "\n**Next to Assign:**\n"
+            
+            # List each course/module
             for assignment in next_assignments:
-                if missing_subjects or failed_subjects:
-                    md += f"- [ ] {assignment} + missing subjects from current report\n"
-                else:
-                    md += f"- [ ] {assignment}\n"
+                md += f"- [ ] {assignment}\n"
+            
+            # List specific missing/failed subjects that need to be assigned
+            if missing_subjects or failed_subjects:
+                md += "\n**Specific Missing/Failed Subjects to Assign:**\n"
+                for subj in missing_subjects:
+                    # Extract just the subject name without the course context
+                    subject_name = subj.split(' (for ')[0]
+                    md += f"- [ ] {subject_name}\n"
+                for subj in failed_subjects:
+                    subject_name = subj.split(' (for ')[0]
+                    md += f"- [ ] {subject_name}\n"
         
         md += "\n- [ ] Updated in FleetPlan\n"
         md += "\n---\n\n"
