@@ -476,6 +476,118 @@ def generate_courses(results, completed):
 
 def generate_obsidian_markdown():
     """Generate Obsidian-compatible markdown with checkboxes"""
+    
+    def get_next_assignments(selected_courses, completed, base_month):
+        """Determine what should be assigned next based on completed courses"""
+        assignments = []
+        warnings = []
+        
+        # Get current date info
+        current_year = datetime.now().year
+        
+        # Determine next base month year (future base month)
+        next_base_year = None
+        if base_month:
+            # Parse base month to get the month number
+            try:
+                month_num = datetime.strptime(base_month, '%B').month
+                # If this month has passed this year, use next year
+                if month_num < datetime.now().month:
+                    next_base_year = current_year + 1
+                elif month_num == datetime.now().month:
+                    # If it's this month, could be this year or next depending on day
+                    next_base_year = current_year + 1  # Default to next year to be safe
+                else:
+                    next_base_year = current_year
+            except:
+                next_base_year = current_year + 1
+        
+        # Check P121 progression
+        p121_courses = [c for c in selected_courses if 'P121' in c or c == 'Module 2 (121)']
+        if p121_courses:
+            if 'Initial (P121)' in p121_courses:
+                assignments.append("Module 1 (P121)")
+            elif 'Module 1 (P121)' in p121_courses:
+                assignments.append("Module 2 (121)")
+            elif 'Module 2 (121)' in p121_courses:
+                assignments.append("Module 1 (P121)")
+        
+        # Check P135 progression
+        p135_courses = [c for c in selected_courses if 'P135' in c]
+        if p135_courses:
+            if 'Initial (P135)' in p135_courses:
+                # Determine odd or even year based on next base month
+                if next_base_year:
+                    if next_base_year % 2 == 0:
+                        assignments.append("Even Year (P135)")
+                    else:
+                        assignments.append("Odd Year (P135)")
+                else:
+                    assignments.append("Odd Year (P135) or Even Year (P135) - check base month")
+            
+            elif 'Odd Year (P135)' in p135_courses or 'Even Year (P135)' in p135_courses:
+                # Check if they did it in the right year
+                last_course = 'Odd Year (P135)' if 'Odd Year (P135)' in p135_courses else 'Even Year (P135)'
+                
+                # Get the year when this course was completed
+                dates = []
+                if last_course in courses:
+                    for subject in courses[last_course]:
+                        if subject in completed and completed[subject][0] == 'PASS' and completed[subject][3]:
+                            parsed_date = parse_date(completed[subject][3])
+                            if parsed_date:
+                                dates.append(parsed_date)
+                
+                if dates:
+                    completion_year = max(dates).year
+                    course_type = 'odd' if 'Odd' in last_course else 'even'
+                    year_type = 'odd' if completion_year % 2 == 1 else 'even'
+                    
+                    # Check if completed in wrong year
+                    if course_type != year_type:
+                        warnings.append(f"⚠️ WARNING: {last_course} was completed in {completion_year} ({year_type} year) - sequence may be incorrect")
+                
+                # Determine next assignment based on next base month
+                if next_base_year:
+                    if next_base_year % 2 == 0:
+                        assignments.append("Even Year (P135)")
+                    else:
+                        assignments.append("Odd Year (P135)")
+                else:
+                    assignments.append("Check next base month for Odd/Even Year (P135)")
+        
+        # Check DG + SMS status
+        dg_completed = False
+        sms_completed = False
+        dg_date = None
+        sms_date = None
+        
+        for subject in ['Dangerous Goods', 'SMS']:
+            if subject in completed and completed[subject][0] == 'PASS' and completed[subject][3]:
+                parsed_date = parse_date(completed[subject][3])
+                if parsed_date:
+                    if subject == 'Dangerous Goods':
+                        dg_completed = True
+                        dg_date = parsed_date
+                    else:
+                        sms_completed = True
+                        sms_date = parsed_date
+        
+        # Check if DG + SMS needs to be assigned (13+ months or missing)
+        needs_dg_sms = False
+        if not dg_completed or not sms_completed:
+            needs_dg_sms = True
+        elif dg_date and sms_date:
+            most_recent = max(dg_date, sms_date)
+            months_ago = (datetime.now() - most_recent).days / 30.44  # Average month length
+            if months_ago > 13:
+                needs_dg_sms = True
+        
+        if needs_dg_sms:
+            assignments.append("DG + SMS")
+        
+        return assignments, warnings
+    
     md = "# Training Analysis Report\n\n"
     md += f"**Generated:** {datetime.now().strftime('%d %B %Y at %H:%M')}\n\n"
     md += "---\n\n"
@@ -535,12 +647,37 @@ def generate_obsidian_markdown():
         else:
             md += "**Status:** ✅ All subjects complete\n\n"
         
+        # Get base month from completed subjects
+        base_month = None
+        for subject, (status, score, base_mo, date) in result['completed'].items():
+            if base_mo:
+                base_month = base_mo
+                break
+        
+        # Determine next assignments
+        next_assignments, warnings = get_next_assignments(selected_courses, result['completed'], base_month)
+        
+        # Show warnings if any
+        if warnings:
+            md += "**⚠️ Warnings:**\n"
+            for warning in warnings:
+                md += f"- {warning}\n"
+            md += "\n"
+        
         # Action items
         md += "**Action Items:**\n"
         md += "- [ ] Assigned in CTS\n"
-        md += "- [ ] Updated in FleetPlan\n"
-        if missing_subjects or failed_subjects:
-            md += "- [ ] Missing subjects assigned\n"
+        
+        # Add next assignments
+        if next_assignments:
+            md += "\n**Next to Assign:**\n"
+            for assignment in next_assignments:
+                if missing_subjects or failed_subjects:
+                    md += f"- [ ] {assignment} + missing subjects from current report\n"
+                else:
+                    md += f"- [ ] {assignment}\n"
+        
+        md += "\n- [ ] Updated in FleetPlan\n"
         md += "\n---\n\n"
     
     return md
