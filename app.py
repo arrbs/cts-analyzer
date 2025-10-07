@@ -537,6 +537,7 @@ def generate_obsidian_markdown():
         
         # Action items
         md += "**Action Items:**\n"
+        md += "- [ ] Assigned in CTS\n"
         md += "- [ ] Updated in FleetPlan\n"
         if missing_subjects or failed_subjects:
             md += "- [ ] Missing subjects assigned\n"
