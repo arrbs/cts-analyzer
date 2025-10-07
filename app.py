@@ -44,8 +44,13 @@ subjects = {
     },
     "Fire Classes": {
         "search_terms": ["Classes of Fire and Portable Fire Extinguishers", "Portable Fire Extinguisher Exam"],
-        "courses": ["Initial (P121)", "Module 1 (P121)"],
-        "validity_months": 24
+        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Even Year (P135)", "Module 1 (P121)"],
+        "validity_months": 12
+    },
+    "H125": {
+        "search_terms": ["H125", "AS350"],
+        "courses": ["Initial (P135)", "Odd Year (P135)", "Even Year (P135)"],
+        "validity_months": 12
     },
     "GPS": {
         "search_terms": ["GPS (RW IFR-VFR)", "GPS (RW IFR) Exam"],
