@@ -331,6 +331,51 @@ def get_date_range(completed):
         return start_date, end_date
     return None, None
 
+def generate_course_group_summary(group_name, course_list, results):
+    """Generate summary for a single course group"""
+    output = f"<h4 style='margin-bottom: 0.5rem;'>{group_name}:</h4><ul style='margin-top: 0.5rem;'>"
+    
+    # Use adjusted percentage for sorting (internal), but display actual counts
+    group_results = []
+    for name in course_list:
+        if name in results:
+            adjusted_perc = results[name]['completion_percentage']
+            completed_count = results[name]['completed_count']
+            total_count = results[name]['total_count']
+            group_results.append((name, adjusted_perc, completed_count, total_count))
+    
+    group_results.sort(key=lambda x: x[1], reverse=True)  # Sort by adjusted percentage
+    
+    for i, (name, adjusted_perc, completed_count, total_count) in enumerate(group_results):
+        # Calculate raw percentage for coloring
+        raw_perc = (completed_count / total_count * 100) if total_count > 0 else 0
+        color = get_color(raw_perc)
+        count_str = f"({completed_count}/{total_count})"
+        
+        # Create anchor ID for linking
+        anchor_id = name.replace(' ', '_').replace('(', '').replace(')', '')
+        
+        # Check for incomplete/failed subjects
+        missing_count = total_count - completed_count
+        warning_badge = ""
+        if i == 0 and completed_count > 0:  # Most likely course
+            if missing_count > 0:
+                # Has missing or failed subjects
+                warning_badge = f' <span style="background: #ffebee; color: #c62828; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.85rem; font-weight: 600; margin-left: 0.5rem;">⚠️ {missing_count} Missing</span>'
+        
+        # Highlight the most likely (first one after sorting)
+        if i == 0 and completed_count > 0:
+            if missing_count > 0:
+                # Incomplete - show with warning
+                output += f"<li style='margin: 0.5rem 0; padding: 0.75rem; background: #fff3e0; border-left: 4px solid #f57c00; border-radius: 4px;'><strong>⭐ <a href='#{anchor_id}'>{name}</a> <span style='color: #6c757d;'>{count_str}</span></strong> <span style='background: #fff; color: #f57c00; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem; border: 1px solid #f57c00;'>Most Likely</span>{warning_badge}</li>"
+            else:
+                # Complete - show with success
+                output += f"<li style='margin: 0.5rem 0; padding: 0.75rem; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px;'><strong>⭐ <a href='#{anchor_id}'>{name}</a> <span style='color: #6c757d;'>{count_str}</span></strong> <span style='background: #d4edda; color: #155724; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem;'>✓ Complete & Most Likely</span></li>"
+        else:
+            output += f"<li style='margin: 0.5rem 0;'><a href='#{anchor_id}'>{name}</a> <span style='color: #6c757d;'>{count_str}</span></li>"
+    output += "</ul>"
+    return output
+
 def generate_courses(results, completed):
     # Group courses
     course_groups = {
@@ -356,48 +401,11 @@ def generate_courses(results, completed):
     output += "<div class='course-summary'>"
     output += "<h3 style='margin-top: 0;'>🎯 Most Likely Course Lists</h3>"
     
-    # For each group, find the most likely course
+    # Display course groups in a more compact way
+    output += "<div style='display: flex; gap: 2rem; flex-wrap: wrap;'>"
     for group_name, course_list in course_groups.items():
-        output += f"<h4>{group_name}:</h4><ul>"
-        # Use adjusted percentage for sorting (internal), but display actual counts
-        group_results = []
-        for name in course_list:
-            if name in results:
-                adjusted_perc = results[name]['completion_percentage']
-                completed_count = results[name]['completed_count']
-                total_count = results[name]['total_count']
-                group_results.append((name, adjusted_perc, completed_count, total_count))
-        
-        group_results.sort(key=lambda x: x[1], reverse=True)  # Sort by adjusted percentage
-        
-        for i, (name, adjusted_perc, completed_count, total_count) in enumerate(group_results):
-            # Calculate raw percentage for coloring
-            raw_perc = (completed_count / total_count * 100) if total_count > 0 else 0
-            color = get_color(raw_perc)
-            count_str = f"({completed_count}/{total_count})"
-            
-            # Create anchor ID for linking
-            anchor_id = name.replace(' ', '_').replace('(', '').replace(')', '')
-            
-            # Check for incomplete/failed subjects
-            missing_count = total_count - completed_count
-            warning_badge = ""
-            if i == 0 and completed_count > 0:  # Most likely course
-                if missing_count > 0:
-                    # Has missing or failed subjects
-                    warning_badge = f' <span style="background: #ffebee; color: #c62828; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.85rem; font-weight: 600; margin-left: 0.5rem;">⚠️ {missing_count} Missing</span>'
-            
-            # Highlight the most likely (first one after sorting)
-            if i == 0 and completed_count > 0:
-                if missing_count > 0:
-                    # Incomplete - show with warning
-                    output += f"<li style='margin: 0.5rem 0; padding: 0.75rem; background: #fff3e0; border-left: 4px solid #f57c00; border-radius: 4px;'><strong>⭐ <a href='#{anchor_id}'>{name}</a> <span style='color: #6c757d;'>{count_str}</span></strong> <span style='background: #fff; color: #f57c00; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem; border: 1px solid #f57c00;'>Most Likely</span>{warning_badge}</li>"
-                else:
-                    # Complete - show with success
-                    output += f"<li style='margin: 0.5rem 0; padding: 0.75rem; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px;'><strong>⭐ <a href='#{anchor_id}'>{name}</a> <span style='color: #6c757d;'>{count_str}</span></strong> <span style='background: #d4edda; color: #155724; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem;'>✓ Complete & Most Likely</span></li>"
-            else:
-                output += f"<li style='margin: 0.5rem 0;'><a href='#{anchor_id}'>{name}</a> <span style='color: #6c757d;'>{count_str}</span></li>"
-        output += "</ul>"
+        output += f"<div style='flex: 1; min-width: 300px;'>{generate_course_group_summary(group_name, course_list, results)}</div>"
+    output += "</div>"
     
     output += "</div>"
     
@@ -434,7 +442,7 @@ def generate_courses(results, completed):
                     date_info = f"<br><span style='color: #6c757d; font-size: 0.9rem;'>📅 {start_date} — {end_date}</span>"
                 
                 output += f"""
-                <div class='report-card' id='{anchor_id}' style='margin-top: 1.5rem;'>
+                <div class='report-card' id='{anchor_id}' style='margin-top: 1rem;'>
                     <h4 style='margin: 0 0 0.5rem 0; color: #2d3748;'>{name} <span style='color: #6c757d; font-weight: normal;'>({completed_count}/{total_count})</span></h4>
                     {date_info}
                 </div>
@@ -459,12 +467,69 @@ def generate_courses(results, completed):
                 output += "</tbody></table>"
     
     # Add all subjects at the bottom
-    output += "<br><br><h3 style='color: #2d3748;'>📚 All Subjects Overview</h3>"
+    output += "<br><h3 style='color: #2d3748;'>📚 All Subjects Overview</h3>"
     output += "<div class='report-card'>"
     output += generate_table(completed)
     output += "</div>"
     
     return output
+
+def generate_obsidian_markdown():
+    """Generate Obsidian-compatible markdown with checkboxes"""
+    md = "# Training Analysis Report\n\n"
+    md += f"**Generated:** {datetime.now().strftime('%d %B %Y at %H:%M')}\n\n"
+    md += "---\n\n"
+    
+    if 'manual_selections' not in st.session_state or 'pdf_results' not in st.session_state:
+        return "No data available for export."
+    
+    for idx, result in enumerate(st.session_state.pdf_results):
+        pdf_key = f"{idx}_{result['username']}"
+        selected_courses = st.session_state.manual_selections.get(pdf_key, [])
+        
+        username = result['username'] or 'Unknown User'
+        md += f"## {username}\n\n"
+        
+        # Current Modules
+        if selected_courses:
+            md += "**Current Modules:**\n"
+            for course in selected_courses:
+                md += f"- {course}\n"
+            md += "\n"
+        else:
+            md += "**Current Modules:** _None selected_\n\n"
+        
+        # Missing/Failed Subjects
+        missing_subjects = []
+        failed_subjects = []
+        
+        for course in selected_courses:
+            if course in courses:
+                for subject in courses[course]:
+                    if subject not in result['completed']:
+                        missing_subjects.append(f"{subject} (for {course})")
+                    elif result['completed'][subject][0] != 'PASS':
+                        failed_subjects.append(f"{subject} (for {course})")
+        
+        if missing_subjects or failed_subjects:
+            md += "**Missing/Failed Subjects:**\n"
+            for subj in missing_subjects:
+                md += f"- [ ] {subj} - MISSING\n"
+            for subj in failed_subjects:
+                md += f"- [ ] {subj} - FAILED\n"
+            md += "\n"
+        else:
+            md += "**Status:** ✅ All subjects complete\n\n"
+        
+        # Action items
+        md += "**Action Items:**\n"
+        md += "- [ ] Updated in FleetPlan\n"
+        if missing_subjects or failed_subjects:
+            md += "- [ ] Missing subjects assigned\n"
+        md += "\n---\n\n"
+    
+    return md
+    
     output = "<h3>Likely Lists (Most Likely in Each Group):</h3>"
     
     # For each group, find the most likely course
@@ -577,27 +642,27 @@ st.markdown("""
     /* Card-style containers */
     .report-card {
         background: white;
-        padding: 2rem;
+        padding: 1rem;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
     }
     
     /* Date range banner */
     .date-banner {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 1.5rem 2rem;
+        padding: 1rem 1.5rem;
         border-radius: 12px;
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
     
     /* Course summary cards */
     .course-summary {
         background: white;
-        padding: 1.5rem;
+        padding: 1rem;
         border-radius: 8px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         margin-bottom: 1rem;
@@ -614,16 +679,17 @@ st.markdown("""
         border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        font-size: 0.9rem;
     }
     
     thead th {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 1rem;
+        padding: 0.75rem;
         text-align: left;
         font-weight: 600;
         text-transform: uppercase;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         letter-spacing: 0.5px;
     }
     
@@ -637,7 +703,7 @@ st.markdown("""
     }
     
     tbody td {
-        padding: 1rem;
+        padding: 0.65rem 0.75rem;
         color: #495057;
     }
     
@@ -645,7 +711,8 @@ st.markdown("""
     h2, h3, h4 {
         color: #2d3748;
         font-weight: 600;
-        margin-top: 2rem;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
     }
     
     /* Links */
@@ -700,10 +767,21 @@ if 'pdf_results' not in st.session_state or not st.session_state.pdf_results:
     </div>
     """, unsafe_allow_html=True)
     
+    # Advanced mode toggle
+    advanced_mode = st.checkbox("🔧 Advanced Mode (Manual course selection + Obsidian export)", value=False)
+    if 'advanced_mode' not in st.session_state:
+        st.session_state.advanced_mode = False
+    
     uploaded_files = st.file_uploader("Upload PDF(s)", type="pdf", accept_multiple_files=True, label_visibility="collapsed")
     
     if uploaded_files:
         if st.button("🚀 Process PDFs", type="primary", use_container_width=True):
+            # Store advanced mode setting
+            st.session_state.advanced_mode = advanced_mode
+            # Initialize manual selections
+            if advanced_mode:
+                st.session_state.manual_selections = {}
+            
             # Process all PDFs and store results in session state
             st.session_state.pdf_results = []
             
@@ -776,11 +854,64 @@ if 'pdf_results' in st.session_state and st.session_state.pdf_results:
     """, unsafe_allow_html=True)
     
     if current_result['username']:
+        # Get base month if available
+        base_month = None
+        for subject, (status, score, base_mo, date) in current_result['completed'].items():
+            if base_mo:
+                base_month = base_mo
+                break
+        
+        base_month_display = f"<p style='margin: 0.5rem 0 0 0; font-size: 1rem; color: white; opacity: 0.9;'>📅 Base Month: {base_month}</p>" if base_month else ""
         st.markdown(f"""
         <div class="report-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
             <h1 style='margin: 0; color: white;'>👤 {current_result['username']}</h1>
+            {base_month_display}
         </div>
         """, unsafe_allow_html=True)
+    
+    # Advanced mode: Manual course selection (at the top)
+    if st.session_state.get('advanced_mode', False):
+        st.markdown("""
+        <div class="report-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-top: 1rem;">
+            <h3 style="margin: 0; color: white;">🔧 Manual Course Selection</h3>
+            <p style="margin: 0.5rem 0 0 0; color: white; opacity: 0.9;">Select the courses that apply to this user (the detailed analysis is below):</p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Initialize selections for this PDF if not exists
+        pdf_key = f"{current_idx}_{current_result['username']}"
+        if 'manual_selections' not in st.session_state:
+            st.session_state.manual_selections = {}
+        if pdf_key not in st.session_state.manual_selections:
+            st.session_state.manual_selections[pdf_key] = []
+        
+        # Group courses for selection
+        course_groups = {
+            'P121 Courses': ['Initial (P121)', 'Module 1 (P121)', 'Module 2 (121)'],
+            'P135 Courses': ['Initial (P135)', 'Odd Year (P135)', 'Even Year (P135)'],
+            'Other': ['DG + SMS']
+        }
+        
+        selected_courses = []
+        for group_name, course_list in course_groups.items():
+            st.markdown(f"**{group_name}:**")
+            cols = st.columns(len(course_list))
+            for idx, course_name in enumerate(course_list):
+                with cols[idx]:
+                    # Show completion count
+                    if course_name in current_result['results']:
+                        count = current_result['results'][course_name]['completed_count']
+                        total = current_result['results'][course_name]['total_count']
+                        is_checked = course_name in st.session_state.manual_selections[pdf_key]
+                        if st.checkbox(f"{course_name} ({count}/{total})", value=is_checked, key=f"checkbox_{pdf_key}_{course_name}"):
+                            if course_name not in selected_courses:
+                                selected_courses.append(course_name)
+        
+        # Update selections
+        st.session_state.manual_selections[pdf_key] = selected_courses
+        
+        st.markdown("<hr style='margin: 2rem 0;'>", unsafe_allow_html=True)
     
     # Generate and display the full report (includes date range, likely lists, details, and all subjects at bottom)
     st.markdown(generate_courses(current_result['results'], current_result['completed']), unsafe_allow_html=True)
@@ -794,3 +925,24 @@ if 'pdf_results' in st.session_state and st.session_state.pdf_results:
     Viewing {current_idx + 1} of {total_pdfs} training records
     </p>
     """, unsafe_allow_html=True)
+    
+    # Export button for advanced mode
+    if st.session_state.get('advanced_mode', False):
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("### 📋 Export to Obsidian")
+        
+        if st.button("📥 Generate Obsidian Markdown", type="primary", use_container_width=True):
+            markdown_content = generate_obsidian_markdown()
+            
+            # Display preview
+            st.markdown("**Preview:**")
+            st.code(markdown_content, language="markdown")
+            
+            # Download button
+            st.download_button(
+                label="💾 Download Markdown File",
+                data=markdown_content,
+                file_name=f"training_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                mime="text/markdown",
+                use_container_width=True
+            )
