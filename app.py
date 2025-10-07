@@ -573,16 +573,37 @@ def generate_obsidian_markdown():
                         sms_completed = True
                         sms_date = parsed_date
         
-        # Check if DG + SMS needs to be assigned for NEXT cycle
-        # If done >12 months ago, still valid now but needs assigning for next time
-        # If >24 months, expired and needs immediate assignment
+        # Check if DG + SMS needs to be assigned for the NEXT base month
+        # Logic: Will DG + SMS expire before the next base month?
         needs_dg_sms = False
         if not dg_completed or not sms_completed:
             needs_dg_sms = True
-        elif dg_date and sms_date:
+        elif dg_date and sms_date and base_month:
             most_recent = max(dg_date, sms_date)
-            months_ago = (datetime.now() - most_recent).days / 30.44  # Average month length
-            if months_ago > 12:  # If over 12 months, will need it for next cycle
+            expiry_date = most_recent + timedelta(days=730)  # 24 months = ~730 days
+            
+            # Calculate next base month date
+            try:
+                month_num = datetime.strptime(base_month, '%B').month
+                # If this month has passed this year, use next year
+                if month_num < datetime.now().month or (month_num == datetime.now().month and datetime.now().day > 15):
+                    next_base_date = datetime(current_year + 1, month_num, 1)
+                else:
+                    next_base_date = datetime(current_year, month_num, 1)
+                
+                # If DG + SMS expires before next base month, need to assign it
+                if expiry_date < next_base_date:
+                    needs_dg_sms = True
+            except:
+                # Fallback: if we can't parse base month, use 12 month rule
+                months_ago = (datetime.now() - most_recent).days / 30.44
+                if months_ago > 12:
+                    needs_dg_sms = True
+        elif dg_date and sms_date:
+            # No base month, use simple 12 month rule
+            most_recent = max(dg_date, sms_date)
+            months_ago = (datetime.now() - most_recent).days / 30.44
+            if months_ago > 12:
                 needs_dg_sms = True
         
         if needs_dg_sms:
