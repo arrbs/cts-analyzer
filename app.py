@@ -494,7 +494,21 @@ def generate_obsidian_markdown():
         if selected_courses:
             md += "**Current Modules:**\n"
             for course in selected_courses:
-                md += f"- {course}\n"
+                # Get date range for this course
+                dates = []
+                if course in courses:
+                    for subject in courses[course]:
+                        if subject in result['completed'] and result['completed'][subject][0] == 'PASS' and result['completed'][subject][3]:
+                            parsed_date = parse_date(result['completed'][subject][3])
+                            if parsed_date:
+                                dates.append(parsed_date)
+                
+                if dates:
+                    start_date = min(dates).strftime('%d %B %Y')
+                    end_date = max(dates).strftime('%d %B %Y')
+                    md += f"- {course} ({start_date} — {end_date})\n"
+                else:
+                    md += f"- {course}\n"
             md += "\n"
         else:
             md += "**Current Modules:** _None selected_\n\n"
