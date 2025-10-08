@@ -39,8 +39,13 @@ subjects = {
     },
     "CFIT": {
         "search_terms": ["Controlled Flight into Terrain Avoidance (CFIT, TAWS, and ALAR) - RW", "Controlled Flight into Terrain Avoidance RW Exam"],
-        "courses": ["Initial (P121)", "Initial (P135)", "Odd Year (P135)", "Even Year (P135)", "Module 1 (P121)"],
+        "courses": ["Initial (P121)", "Module 1 (P121)"],
         "validity_months": 24
+    },
+    "CFIT (P135)": {
+        "search_terms": ["Controlled Flight into Terrain Avoidance (CFIT, TAWS, and ALAR) - RW", "Controlled Flight into Terrain Avoidance RW Exam"],
+        "courses": ["Initial (P135)", "Odd Year (P135)", "Even Year (P135)"],
+        "validity_months": 12
     },
     "Fire Classes": {
         "search_terms": ["Classes of Fire and Portable Fire Extinguishers", "Portable Fire Extinguisher Exam"],
