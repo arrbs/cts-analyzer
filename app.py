@@ -48,7 +48,7 @@ subjects = {
         "validity_months": 12
     },
     "H125": {
-        "search_terms": ["H125", "AS350"],
+        "search_terms": ["H125", "AS-350B3e"],
         "courses": ["Initial (P135)", "Odd Year (P135)", "Even Year (P135)"],
         "validity_months": 12
     },
@@ -578,8 +578,9 @@ def generate_obsidian_markdown():
                         sms_completed = True
                         sms_date = parsed_date
         
-        # Check if DG + SMS needs to be assigned for the NEXT base month
-        # Logic: Will DG + SMS expire before the next base month?
+        # Check if DG + SMS needs to be assigned for the NEXT training cycle
+        # Logic: Will DG + SMS expire before the base month AFTER next?
+        # Example: Current Oct 2025, next base Dec 2025, need to check Dec 2026
         needs_dg_sms = False
         if not dg_completed or not sms_completed:
             needs_dg_sms = True
@@ -587,17 +588,20 @@ def generate_obsidian_markdown():
             most_recent = max(dg_date, sms_date)
             expiry_date = most_recent + timedelta(days=730)  # 24 months = ~730 days
             
-            # Calculate next base month date
+            # Calculate the base month AFTER next (the cycle after the one we're assigning now)
             try:
                 month_num = datetime.strptime(base_month, '%B').month
-                # If this month has passed this year, use next year
+                # Find next occurrence of this base month
                 if month_num < datetime.now().month or (month_num == datetime.now().month and datetime.now().day > 15):
                     next_base_date = datetime(current_year + 1, month_num, 1)
                 else:
                     next_base_date = datetime(current_year, month_num, 1)
                 
-                # If DG + SMS expires before next base month, need to assign it
-                if expiry_date < next_base_date:
+                # Add 12 months to get the cycle AFTER next
+                cycle_after_next = next_base_date + timedelta(days=365)
+                
+                # If DG + SMS expires before the cycle after next, need to assign it now
+                if expiry_date < cycle_after_next:
                     needs_dg_sms = True
             except:
                 # Fallback: if we can't parse base month, use 12 month rule
