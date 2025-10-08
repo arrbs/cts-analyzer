@@ -570,17 +570,26 @@ def generate_obsidian_markdown():
         sms_completed = False
         dg_date = None
         sms_date = None
-        
-        for subject in ['Dangerous Goods', 'SMS']:
-            if subject in completed and completed[subject][0] == 'PASS' and completed[subject][3]:
-                parsed_date = parse_date(completed[subject][3])
+
+        dg_dates = []
+        for subject_name in ["Hazmat", "Dangerous Goods"]:
+            if subject_name in completed and completed[subject_name][0] == 'PASS' and completed[subject_name][3]:
+                parsed_date = parse_date(completed[subject_name][3])
                 if parsed_date:
-                    if subject == 'Dangerous Goods':
-                        dg_completed = True
-                        dg_date = parsed_date
-                    else:
-                        sms_completed = True
-                        sms_date = parsed_date
+                    dg_dates.append(parsed_date)
+        if dg_dates:
+            dg_completed = True
+            dg_date = max(dg_dates)
+
+        sms_dates = []
+        for subject_name in ["SMS"]:
+            if subject_name in completed and completed[subject_name][0] == 'PASS' and completed[subject_name][3]:
+                parsed_date = parse_date(completed[subject_name][3])
+                if parsed_date:
+                    sms_dates.append(parsed_date)
+        if sms_dates:
+            sms_completed = True
+            sms_date = max(sms_dates)
         
         # Check if DG + SMS needs to be assigned
         # Rule: If DG + SMS was written more than 14 months before the upcoming base month, assign it
