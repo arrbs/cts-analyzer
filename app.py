@@ -561,6 +561,10 @@ def generate_obsidian_markdown():
                 else:
                     assignments.append("Check next base month for Odd/Even Year (P135)")
         
+        # Only check DG + SMS if there are selected courses
+        if not selected_courses:
+            return assignments, warnings
+        
         # Check DG + SMS status
         dg_completed = False
         sms_completed = False
