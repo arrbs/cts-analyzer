@@ -583,8 +583,8 @@ def generate_obsidian_markdown():
                         sms_date = parsed_date
         
         # Check if DG + SMS needs to be assigned
-        # Simple rule: Only assign if it will expire within the next 14 months
-        # This ensures we assign it when they'll actually need to complete it for the next cycle
+        # Only assign if it will expire within the next 12 months (one year)
+        # This gives enough lead time while avoiding premature assignment
         needs_dg_sms = False
         if not dg_completed or not sms_completed:
             needs_dg_sms = True
@@ -592,10 +592,10 @@ def generate_obsidian_markdown():
             most_recent = max(dg_date, sms_date)
             expiry_date = most_recent + timedelta(days=730)  # 24 months = ~730 days
             
-            # Check if it expires within the next 14 months
-            fourteen_months_from_now = datetime.now() + timedelta(days=425)  # ~14 months
+            # Check if it expires within the next 12 months
+            twelve_months_from_now = datetime.now() + timedelta(days=365)  # ~12 months
             
-            if expiry_date < fourteen_months_from_now:
+            if expiry_date < twelve_months_from_now:
                 needs_dg_sms = True
         
         if needs_dg_sms:
