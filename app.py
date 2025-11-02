@@ -118,7 +118,13 @@ subjects = {
         "validity_months": 24
     },
     "Hazmat": {
-        "search_terms": ["Hazmat - Will Not Carry", "Hazmat Will Not Carry Exam", "THC - Dangerous Goods Awareness (DGA)-Will Not Carry", "Dangerous Goods Awareness (DGA)", "DGA-Will Not Carry"],
+        "search_terms": [
+            "Hazmat - Will Not Carry",
+            "Hazmat Will Not Carry Exam",
+            "THC - Dangerous Goods Awareness (DGA)-Will Not Carry",
+            "Dangerous Goods Awareness (DGA)",
+            "DGA-Will Not Carry"
+        ],
         "courses": ["Initial (P121)", "Initial (P135)", "DG + SMS"],
         "validity_months": 24
     },
