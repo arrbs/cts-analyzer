@@ -122,11 +122,6 @@ subjects = {
         "courses": ["Initial (P121)", "Initial (P135)", "DG + SMS"],
         "validity_months": 24
     },
-    "Dangerous Goods": {
-        "search_terms": ["THC - Dangerous Goods Awareness (DGA)-Will Not Carry", "Dangerous Goods Awareness (DGA)", "DGA-Will Not Carry", "Hazmat - Will Not Carry", "Hazmat Will Not Carry Exam"],
-        "courses": ["Initial (P121)", "Initial (P135)", "DG + SMS"],
-        "validity_months": 24
-    },
 }
 
 # Threshold for "likely" course match (in %)
